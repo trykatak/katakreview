@@ -478,6 +478,13 @@ export function isTransientTokenError(error: unknown): boolean {
 }
 
 export async function acquireNewToken(opts?: AcquireTokenOptions): Promise<string> {
+  // SELFHOST: explicit GitHub App credentials win over the hosted OIDC
+  // exchange. A self-hosted deployment runs its own GitHub App and has no
+  // pullfrog.com API to exchange tokens with — the OIDC audience
+  // ("pullfrog-api") would not authenticate there anyway.
+  if (process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY) {
+    return await acquireTokenViaGitHubApp(opts);
+  }
   if (opts?.oidc || isOIDCAvailable()) {
     return await yes.op(() => acquireTokenViaOIDC(opts), {
       name: "token exchange",
