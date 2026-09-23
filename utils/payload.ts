@@ -250,7 +250,24 @@ export function resolvePromptInput(): ResolvedPromptInput {
   // validation errors should propagate
   const jsonPayload = JsonPayload.assert(parsed);
   validateCompatibility(jsonPayload.version, packageJson.version);
+  // SELFHOST: stash the dispatcher's run token (extra field, ignored by the
+  // schema) so the end-of-run usage report can authenticate itself.
+  const extra = parsed as { runToken?: unknown };
+  if (typeof extra.runToken === "string" && extra.runToken.length > 0) {
+    setLastRunToken(extra.runToken);
+  }
   return jsonPayload;
+}
+
+/** SELFHOST: run token from the dispatch payload — authenticates the
+ * end-of-run usage report back to the dispatcher (works on hosted AND
+ * self-hosted runners, where no OIDC is available). */
+let lastRunToken: string | undefined;
+export function setLastRunToken(token: string): void {
+  lastRunToken = token;
+}
+export function getLastRunToken(): string | undefined {
+  return lastRunToken;
 }
 
 // the path is workflow-author-controlled (anyone who can set prompt_file can

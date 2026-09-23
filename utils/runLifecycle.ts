@@ -36,6 +36,7 @@ import { persistSummary } from "./prSummary.ts";
 import { postReviewCleanup } from "./reviewCleanup.ts";
 import { type RenderedRunError, renderRunError } from "./runErrorRenderer.ts";
 import { reportStatusChecks } from "./statusChecks.ts";
+import { reportUsage } from "./usageReport.ts";
 
 /**
  * Best-effort cleanup shared by both run-end paths:
@@ -150,6 +151,11 @@ export async function finalizeSuccessRun(input: {
   } catch (error) {
     log.debug(`job summary write failed: ${error}`);
   }
+
+  // SELFHOST: report token usage/cost back to the dispatcher's analytics.
+  // best-effort — a failed report must never fail the run. authenticated by
+  // the dispatcher-issued run token stashed during payload parse.
+  void reportUsage(input.toolState).catch(() => {});
 
   if (input.toolState.output) {
     log.info(`::pullfrog-output::${Buffer.from(input.toolState.output).toString("base64")}`);
