@@ -375,12 +375,21 @@ const createInstallationToken = async (
   if (permissions) {
     requestOpts.body = JSON.stringify({ permissions });
   }
-  const response = await githubRequest<InstallationTokenResponse>(
-    `/app/installations/${installationId}/access_tokens`,
-    requestOpts
-  );
-
-  return response.token;
+  try {
+    const response = await githubRequest<InstallationTokenResponse>(
+      `/app/installations/${installationId}/access_tokens`,
+      requestOpts
+    );
+    return response.token;
+  } catch (err) {
+    // SELFHOST: a permission subset the app does not grant fails with 422.
+    // fall back to an unscoped token — it still cannot exceed the app's own
+    // permission grants, which the operator controls at the app level.
+    if (permissions && err instanceof Error && err.message.includes("422")) {
+      return createInstallationToken(jwt, installationId);
+    }
+    throw err;
+  }
 };
 
 const findInstallationId = async (
