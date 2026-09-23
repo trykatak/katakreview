@@ -482,7 +482,7 @@ export async function acquireNewToken(opts?: AcquireTokenOptions): Promise<strin
   // exchange. A self-hosted deployment runs its own GitHub App and has no
   // pullfrog.com API to exchange tokens with — the OIDC audience
   // ("pullfrog-api") would not authenticate there anyway.
-  if (process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY) {
+  if (process.env.GITHUB_APP_ID && (process.env.GITHUB_PRIVATE_KEY || process.env.GITHUB_APP_PRIVATE_KEY)) {
     return await acquireTokenViaGitHubApp(opts);
   }
   if (opts?.oidc || isOIDCAvailable()) {
