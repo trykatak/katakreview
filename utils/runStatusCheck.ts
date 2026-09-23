@@ -136,8 +136,8 @@ export interface RunStatusCheckOctokit {
 }
 
 const IN_PROGRESS_OUTPUT = {
-  title: "Pullfrog is running",
-  summary: "Pullfrog is working on this pull request. This check updates when the run finishes.",
+  title: "katakpull is running",
+  summary: "katakpull is working on this pull request. This check updates when the run finishes.",
 };
 
 /**
@@ -148,7 +148,7 @@ const IN_PROGRESS_OUTPUT = {
  * as "the remedy is to turn this off", so the link names the exact toggle and never leads.
  */
 function disableCheckLine(owner: string, repo: string): string {
-  const url = `https://pullfrog.com/console/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}#auto-review-prs`;
+  const url = `https://katak.vayazka.com/healthz`; // SELFHOST: no hosted console — point at the dispatcher
   return `\n\nThis check reports run status only and gates nothing unless you required it in branch protection. [Turn off the run status check →](${url})`;
 }
 
@@ -165,31 +165,31 @@ function logsLine(detailsUrl: string | undefined): string {
 
 const TERMINAL_OUTPUT: Record<RunStatusCheckConclusion, { title: string; summary: string }> = {
   success: {
-    title: "Pullfrog run completed",
-    summary: "The Pullfrog run finished successfully.",
+    title: "katakpull run completed",
+    summary: "The katakpull run finished successfully.",
   },
   failure: {
-    title: "Pullfrog run failed",
-    summary: "The Pullfrog run failed.",
+    title: "katakpull run failed",
+    summary: "The katakpull run failed.",
   },
   cancelled: {
-    title: "Pullfrog run cancelled",
-    summary: "The Pullfrog run was cancelled before it finished.",
+    title: "katakpull run cancelled",
+    summary: "The katakpull run was cancelled before it finished.",
   },
   timed_out: {
-    title: "Pullfrog run timed out",
-    summary: "The Pullfrog run exceeded its timeout.",
+    title: "katakpull run timed out",
+    summary: "The katakpull run exceeded its timeout.",
   },
   action_required: {
-    title: "Pullfrog run needs attention",
-    summary: "The Pullfrog run stopped and needs attention.",
+    title: "katakpull run needs attention",
+    summary: "The katakpull run stopped and needs attention.",
   },
   neutral: {
-    title: "Pullfrog run finished",
-    summary: "The Pullfrog run finished without a pass or fail outcome.",
+    title: "katakpull run finished",
+    summary: "The katakpull run finished without a pass or fail outcome.",
   },
   skipped: {
-    title: "Pullfrog run skipped",
+    title: "katakpull run skipped",
     summary: "This run was superseded by another Pullfrog run.",
   },
 };

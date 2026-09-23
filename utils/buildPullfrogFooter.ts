@@ -8,7 +8,7 @@ import {
 
 export const PULLFROG_DIVIDER = "<!-- PULLFROG_DIVIDER_DO_NOT_REMOVE_PLZ -->";
 
-const FROG_LOGO = `<a href="https://pullfrog.com"><picture><source media="(prefers-color-scheme: dark)" srcset="https://pullfrog.com/logos/frog-white-full-18px.png"><img src="https://pullfrog.com/logos/frog-green-full-18px.png" width="9px" height="9px" style="vertical-align: middle; " alt="Pullfrog"></picture></a>`;
+// SELFHOST (katakpull): no upstream logo/branding — plain text attribution only.
 
 export interface WorkflowRunFooterInfo {
   owner: string;
@@ -198,7 +198,7 @@ export function buildPullfrogFooter(params: BuildPullfrogFooterParams): string {
   }
 
   if (params.triggeredBy) {
-    parts.push("via [Pullfrog](https://pullfrog.com)");
+    parts.push("via katakpull");
   }
 
   if (params.model) {
@@ -213,12 +213,12 @@ export function buildPullfrogFooter(params: BuildPullfrogFooterParams): string {
     );
   }
 
-  const allParts = [...parts, "[𝕏](https://x.com/pullfrogai)"];
+  const allParts = [...parts];
 
   const disclosure =
     params.clamped?.reason === "trial" ? `${buildTrialDisclosure(params.owner)}\n\n` : "";
 
-  return `\n\n${PULLFROG_DIVIDER}\n${disclosure}<sup>${FROG_LOGO}&nbsp;&nbsp;｜ ${allParts.join(" ｜ ")}</sup>`;
+  return `\n\n${PULLFROG_DIVIDER}\n${disclosure}<sup>${allParts.join(" ｜ ")}</sup>`;
 }
 
 /**
