@@ -25,8 +25,8 @@ export const test: TestRunnerOptions = {
   fixture,
   validator,
   env: {
-    PULLFROG_DISABLE_SECURITY_INSTRUCTIONS: "1",
-    PULLFROG_MODEL: "bedrock/byok",
+    KATAK_DISABLE_SECURITY_INSTRUCTIONS: "1",
+    KATAK_MODEL: "bedrock/byok",
     BEDROCK_MODEL_ID: "us.anthropic.claude-sonnet-4-6",
     AWS_REGION: "us-east-1",
   },

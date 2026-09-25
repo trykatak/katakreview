@@ -5,15 +5,15 @@ function isLocalUrl(url: URL): boolean {
 }
 
 /**
- * resolve the Pullfrog API base URL.
+ * resolve the katak API base URL.
  *
- * in the action: API_URL is not explicitly set, so this falls back to https://pullfrog.com.
+ * in the action: API_URL is not explicitly set, so this falls back to https://api.katak.review.
  * in local dev: API_URL=http://localhost:3000 (from .env).
  *
  * enforces https:// for non-local URLs to prevent cleartext credential transmission.
  */
 export function getApiUrl(): string {
-  const raw = process.env.API_URL || "https://pullfrog.com";
+  const raw = process.env.API_URL || "https://api.katak.review";
   const parsed = new URL(raw);
 
   if (parsed.protocol !== "https:" && !isLocalUrl(parsed)) {

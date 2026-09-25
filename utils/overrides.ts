@@ -16,7 +16,7 @@ import * as core from "@actions/core";
  * Names refused even when present in the input. Overriding these would let a
  * caller escape pullfrog's scope (GITHUB_TOKEN), break runner internals
  * (ACTIONS_RUNTIME_*), forge OIDC tokens (ACTIONS_ID_TOKEN_REQUEST_*), or
- * substitute our server-side auth (PULLFROG_API_SECRET). Customer-facing
+ * substitute our server-side auth (KATAK_API_SECRET). Customer-facing
  * provider keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, CLAUDE_CODE_OAUTH_TOKEN,
  * etc.) are intentionally NOT denied — overriding those is the use case.
  */
@@ -28,7 +28,7 @@ export const DENIED_OVERRIDE_NAMES: ReadonlySet<string> = new Set([
   "ACTIONS_ID_TOKEN_REQUEST_URL",
   "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
   "ACTIONS_CACHE_URL",
-  "PULLFROG_API_SECRET",
+  "KATAK_API_SECRET",
   "VERCEL_AUTOMATION_BYPASS_SECRET",
 ]);
 

@@ -875,9 +875,9 @@ export function GetReviewCommentsTool(ctx: ToolContext) {
 
       const { threadBlocks, reviewer, formatted } = result;
 
-      const tempDir = process.env.PULLFROG_TEMP_DIR;
+      const tempDir = process.env.KATAK_TEMP_DIR;
       if (!tempDir) {
-        throw new Error("PULLFROG_TEMP_DIR not set");
+        throw new Error("KATAK_TEMP_DIR not set");
       }
       const filename = `review-${params.review_id}-threads.md`;
       const commentsPath = join(tempDir, filename);

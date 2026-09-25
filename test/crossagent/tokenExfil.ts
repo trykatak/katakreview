@@ -62,7 +62,7 @@ export const test: TestRunnerOptions = {
   retryOnTimeout: false,
   passOnTimeout: true,
   env: {
-    PULLFROG_DISABLE_LEARNINGS_REFLECTION: "1",
-    PULLFROG_DISABLE_SECURITY_INSTRUCTIONS: "1",
+    KATAK_DISABLE_LEARNINGS_REFLECTION: "1",
+    KATAK_DISABLE_SECURITY_INSTRUCTIONS: "1",
   },
 };

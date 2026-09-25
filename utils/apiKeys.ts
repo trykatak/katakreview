@@ -189,7 +189,7 @@ function buildSecretsUnavailableError(params: {
  *
  * The lead says "this run used" rather than "this repo is configured to use",
  * because the resolved model does not always come from the repo's config — a
- * trigger-time `--model=`, a `PULLFROG_MODEL` variable or a server-side canary
+ * trigger-time `--model=`, a `KATAK_MODEL` variable or a server-side canary
  * arm all land here too, and asserting provenance we do not have blames the
  * user's configuration for a model they never chose. A model canary did exactly
  * that to vite-hub/vitehub#1347 on 2026-09-08.

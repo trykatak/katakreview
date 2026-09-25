@@ -104,7 +104,7 @@ const cliContent = readFileSync(cliPath, "utf8");
 writeFileSync(cliPath, `#!/usr/bin/env node\n${cliContent}`);
 
 // copy bundled SKILL.md files into dist/ so the npm-published runtime can read
-// them via readFileSync. source-mode runs (PULLFROG_FORCE_LOCAL_CLI=1) read
+// them via readFileSync. source-mode runs (KATAK_FORCE_LOCAL_CLI=1) read
 // directly from action/skills/ instead. see utils/skills.ts.
 cpSync("./skills", "./dist/skills", { recursive: true });
 

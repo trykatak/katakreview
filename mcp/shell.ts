@@ -191,7 +191,7 @@ const SOCKET_CLEANUP = [
 //
 //   1. tmpfs over /var/lib/pullfrog/ — codex auth.json and any future
 //      pullfrog-managed on-disk secret live here (see action/utils/codexHome.ts
-//      PULLFROG_DATA_DIR). opencode's internal auth module runs in the agent
+//      KATAK_DATA_DIR). opencode's internal auth module runs in the agent
 //      process outside this namespace and reads the real file via bypass of
 //      external_directory; bash sees an empty tmpfs. mkdir -p the path
 //      first so the tmpfs always engages — without that, runs without
@@ -255,7 +255,7 @@ function buildFsMounts(repoDir: string): string {
     // a `git`/`pnpm` that a later UNSANDBOXED spawn resolves with the parent
     // env. read-only closes that for every sandboxed command at once.
     //
-    // the path is interpolated HERE rather than read as `$PULLFROG_TEMP_DIR`
+    // the path is interpolated HERE rather than read as `$KATAK_TEMP_DIR`
     // inside the sandbox: that name is not on the `filterEnv` safe list, so in
     // restricted mode it expands to empty and the mount silently no-ops in the
     // one tier it exists to protect. `$RUNNER_TEMP` above is safe only because
@@ -268,7 +268,7 @@ function buildFsMounts(repoDir: string): string {
 
 /** read-only bind for the corepack shim dir, or "" when this run has no tmpdir. */
 function shimMount(): string {
-  const tempDir = process.env.PULLFROG_TEMP_DIR;
+  const tempDir = process.env.KATAK_TEMP_DIR;
   if (!tempDir) return "";
   const dir = join(tempDir, "pm-bin").replace(/'/g, "'\\''");
   return `[ -d '${dir}' ] && mount --bind '${dir}' '${dir}' 2>/dev/null && mount -o remount,bind,ro '${dir}' 2>/dev/null;`;
@@ -446,9 +446,9 @@ async function killProcessGroup(proc: ChildProcess): Promise<void> {
 }
 
 function getTempDir(): string {
-  const tempDir = process.env.PULLFROG_TEMP_DIR;
+  const tempDir = process.env.KATAK_TEMP_DIR;
   if (!tempDir) {
-    throw new Error("PULLFROG_TEMP_DIR not set");
+    throw new Error("KATAK_TEMP_DIR not set");
   }
   return tempDir;
 }

@@ -12,6 +12,7 @@
 // `STATE_oauth_writeback` is exactly what `core.getState` reads, without
 // needing `@actions/core` to resolve.
 
+import "./utils/legacyEnv.ts";
 import { runPullfrogCli } from "./runCli.ts";
 
 if (process.env.STATE_oauth_writeback) {

@@ -55,9 +55,9 @@ function hasVertexAuth(): boolean {
 /**
  * resolve a single slug to its CLI-ready model string. routing aliases
  * (e.g. `bedrock/byok`) defer to their backing env var instead of the
- * sentinel stored in `resolve`. shared between PULLFROG_MODEL override
+ * sentinel stored in `resolve`. shared between KATAK_MODEL override
  * and repo-config slug resolution so both paths get the same routing
- * semantics — without this helper, `PULLFROG_MODEL=bedrock/byok` would
+ * semantics — without this helper, `KATAK_MODEL=bedrock/byok` would
  * leak the literal sentinel string `"bedrock"` downstream.
  */
 function resolveSlug(slug: string): string | undefined {
@@ -115,19 +115,19 @@ function resolveSlug(slug: string): string | undefined {
  * resolve the effective model for this run.
  *
  * priority:
- *   1. PULLFROG_MODEL env var — resolved through the alias registry first,
+ *   1. KATAK_MODEL env var — resolved through the alias registry first,
  *      so values like "anthropic/claude-opus" become "anthropic/claude-opus-4-7".
  *      raw specifiers (e.g. "anthropic/claude-opus-4-6") pass through unchanged.
  *      always wins — bypasses Bedrock routing entirely. to test a different
- *      Bedrock model, change `BEDROCK_MODEL_ID`, not `PULLFROG_MODEL`.
+ *      Bedrock model, change `BEDROCK_MODEL_ID`, not `KATAK_MODEL`.
  *   2. slug from repo config / payload → alias registry. routing slugs
  *      (e.g. `bedrock/byok`) defer to a separate env var (`BEDROCK_MODEL_ID`).
  *      a non-curated value with a slash passes through unchanged as a raw
- *      models.dev specifier (same as `PULLFROG_MODEL`), not auto-selected away.
+ *      models.dev specifier (same as `KATAK_MODEL`), not auto-selected away.
  *   3. undefined (no slug, or a bare-word non-specifier) — agent auto-selects.
  */
 export function resolveModel(ctx: { slug?: string | undefined }): string | undefined {
-  const envModel = process.env.PULLFROG_MODEL?.trim();
+  const envModel = process.env.KATAK_MODEL?.trim();
   if (envModel) {
     return resolveSlug(envModel) ?? envModel;
   }
@@ -165,14 +165,14 @@ export function resolveAgent(ctx: {
   codexAgent?: boolean | undefined;
 }): Agent {
   // 1. explicit env var override (escape hatch). deliberately NOT gated on the
-  //    opt-in: an operator who sets PULLFROG_AGENT in their own workflow is
+  //    opt-in: an operator who sets KATAK_AGENT in their own workflow is
   //    asking for a specific harness, which is what the escape hatch is for.
-  const envAgent = process.env.PULLFROG_AGENT?.trim();
+  const envAgent = process.env.KATAK_AGENT?.trim();
   if (envAgent) {
     if (envAgent in agents) {
       return agents[envAgent as keyof typeof agents];
     }
-    log.warning(`» unknown PULLFROG_AGENT="${envAgent}" — falling through to auto-select`);
+    log.warning(`» unknown KATAK_AGENT="${envAgent}" — falling through to auto-select`);
   }
 
   // 2. proxy runs are OpenRouter-served; only opencode speaks that provider.

@@ -89,11 +89,11 @@ describe("entryPost.ts stdlib-only invariant (#834)", () => {
     const visited = [...result.visited]
       .map((f) => relative(import.meta.dirname, f).replaceAll("\\", "/"))
       .sort();
-    expect(visited).toEqual(["entryPost.ts", "runCli.ts"]);
+    expect(visited).toEqual(["entryPost.ts", "runCli.ts", "utils/legacyEnv.ts"]);
   });
 
   it("locks down the direct-import surface of entryPost.ts (including stdlib)", () => {
     const direct = extractImports(ENTRY_FILE).sort();
-    expect(direct).toEqual(["./runCli.ts"]);
+    expect(direct).toEqual(["./runCli.ts", "./utils/legacyEnv.ts"]);
   });
 });

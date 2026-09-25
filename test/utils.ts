@@ -212,7 +212,7 @@ export async function runAgentStreaming(options: RunStreamingOptions): Promise<A
 
     // create unique HOME directory per test to avoid config file conflicts
     // when multiple tests run in parallel
-    const mcpPort = options.env?.PULLFROG_MCP_PORT ?? "default";
+    const mcpPort = options.env?.KATAK_MCP_PORT ?? "default";
     const testHome = `/tmp/home-${mcpPort}-${Date.now()}`;
     mkdirSync(testHome, { recursive: true });
 
@@ -372,7 +372,7 @@ export interface TestRunnerOptions {
   passOnTimeout?: boolean;
   // shell commands to run in the repo directory after cloning but before the
   // agent starts. used to simulate pre-existing repo state (e.g., malicious
-  // symlinks from a PR). passed to play.ts via PULLFROG_TEST_REPO_SETUP env var.
+  // symlinks from a PR). passed to play.ts via KATAK_TEST_REPO_SETUP env var.
   repoSetup?: string;
   // tags for grouping tests (e.g., ["agnostic"], ["fs"])
   // special tags:

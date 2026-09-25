@@ -21,9 +21,9 @@ const STRIPPED = [
   /^VERTEX_SERVICE_ACCOUNT_JSON$/,
   /^VERTEX_LOCATION$/,
   /^VERTEX_MODEL_ID$/,
-  /^PULLFROG_SECRET_HOME$/,
-  /^PULLFROG_MODEL$/,
-  /^PULLFROG_AGENT$/,
+  /^KATAK_SECRET_HOME$/,
+  /^KATAK_MODEL$/,
+  /^KATAK_AGENT$/,
 ];
 
 beforeEach(() => {
@@ -86,8 +86,8 @@ describe("resolveAgent", () => {
       expect(resolveAgent({ model: "us.anthropic.claude-opus-4-7" }).name).toBe("claude");
     });
 
-    it("PULLFROG_AGENT override wins over Anthropic auto-routing", () => {
-      process.env.PULLFROG_AGENT = "opencode";
+    it("KATAK_AGENT override wins over Anthropic auto-routing", () => {
+      process.env.KATAK_AGENT = "opencode";
       process.env.AWS_BEARER_TOKEN_BEDROCK = "bedrock-token";
       process.env.BEDROCK_MODEL_ID = "us.anthropic.claude-opus-4-7";
       expect(resolveAgent({ model: "us.anthropic.claude-opus-4-7" }).name).toBe("opencode");
@@ -110,13 +110,13 @@ describe("resolveAgent", () => {
 });
 
 describe("resolveModel", () => {
-  it("PULLFROG_MODEL override wins", () => {
-    process.env.PULLFROG_MODEL = "anthropic/claude-opus";
+  it("KATAK_MODEL override wins", () => {
+    process.env.KATAK_MODEL = "anthropic/claude-opus";
     expect(resolveModel({ slug: "openai/gpt" })).toBe("anthropic/claude-opus-5");
   });
 
-  it("PULLFROG_MODEL bypasses bedrock routing entirely", () => {
-    process.env.PULLFROG_MODEL = "openai/gpt";
+  it("KATAK_MODEL bypasses bedrock routing entirely", () => {
+    process.env.KATAK_MODEL = "openai/gpt";
     process.env.BEDROCK_MODEL_ID = "us.anthropic.claude-opus-4-7";
     expect(resolveModel({ slug: "bedrock/byok" })).toBe("openai/gpt-5.6-sol");
   });
@@ -134,22 +134,22 @@ describe("resolveModel", () => {
     expect(resolveModel({ slug: "openai/gpt" })).toBe("openai/gpt-5.6-sol");
   });
 
-  it("returns undefined for no slug + no PULLFROG_MODEL", () => {
+  it("returns undefined for no slug + no KATAK_MODEL", () => {
     expect(resolveModel({})).toBeUndefined();
   });
 
   // regression: PR #720 review caught that `resolveCliModel("bedrock/byok")`
   // returns the literal sentinel `"bedrock"` from the alias's `resolve`
-  // field. Without routing-aware handling, PULLFROG_MODEL=bedrock/byok would
+  // field. Without routing-aware handling, KATAK_MODEL=bedrock/byok would
   // leak that sentinel downstream and break agent dispatch.
-  it("PULLFROG_MODEL=bedrock/byok defers to BEDROCK_MODEL_ID, not the sentinel", () => {
-    process.env.PULLFROG_MODEL = "bedrock/byok";
+  it("KATAK_MODEL=bedrock/byok defers to BEDROCK_MODEL_ID, not the sentinel", () => {
+    process.env.KATAK_MODEL = "bedrock/byok";
     process.env.BEDROCK_MODEL_ID = "us.anthropic.claude-opus-4-7";
     expect(resolveModel({ slug: "openai/gpt" })).toBe("us.anthropic.claude-opus-4-7");
   });
 
-  it("PULLFROG_MODEL=bedrock/byok throws if BEDROCK_MODEL_ID is missing", () => {
-    process.env.PULLFROG_MODEL = "bedrock/byok";
+  it("KATAK_MODEL=bedrock/byok throws if BEDROCK_MODEL_ID is missing", () => {
+    process.env.KATAK_MODEL = "bedrock/byok";
     expect(() => resolveModel({ slug: "openai/gpt" })).toThrow("BEDROCK_MODEL_ID");
   });
 
@@ -162,8 +162,8 @@ describe("resolveModel", () => {
     expect(() => resolveModel({ slug: "vertex/byok" })).toThrow("VERTEX_MODEL_ID");
   });
 
-  it("PULLFROG_MODEL=vertex/byok defers to VERTEX_MODEL_ID, not the sentinel", () => {
-    process.env.PULLFROG_MODEL = "vertex/byok";
+  it("KATAK_MODEL=vertex/byok defers to VERTEX_MODEL_ID, not the sentinel", () => {
+    process.env.KATAK_MODEL = "vertex/byok";
     process.env.VERTEX_MODEL_ID = "gemini-2.5-pro";
     expect(resolveModel({ slug: "openai/gpt" })).toBe("gemini-2.5-pro");
   });
@@ -173,7 +173,7 @@ describe("materializeVertexCredentials", () => {
   it("writes service-account JSON outside tmpdir and defaults project from project_id", () => {
     const dir = mkdtempSync(join(tmpdir(), "vertex-creds-test-"));
     process.env.VERTEX_MODEL_ID = "claude-opus-4-1@20250805";
-    process.env.PULLFROG_SECRET_HOME = dir;
+    process.env.KATAK_SECRET_HOME = dir;
     process.env.VERTEX_SERVICE_ACCOUNT_JSON = JSON.stringify({
       project_id: "test-project",
       client_email: "pullfrog@test-project.iam.gserviceaccount.com",

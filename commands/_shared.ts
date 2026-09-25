@@ -12,7 +12,7 @@ import {
   CliContractError,
 } from "../cliContract.ts";
 
-export const PULLFROG_API_URL = (process.env.PULLFROG_API_URL || "https://pullfrog.com").replace(
+export const KATAK_API_URL = (process.env.KATAK_API_URL || "https://pullfrog.com").replace(
   /\/+$/,
   ""
 );
@@ -41,7 +41,7 @@ export function shadowRefusal(params: {
     .filter((override) => override.name === params.name)
     .map((override) => `${params.owner}/${override.repo}`);
   if (!repos.length) return null;
-  const bin = process.env.PULLFROG_BIN_NAME || "pullfrog";
+  const bin = process.env.KATAK_BIN_NAME || "pullfrog";
   return [
     `${pc.cyan(params.name)} is already set on ${repos.map((repo) => pc.cyan(repo)).join(", ")}.`,
     `a repo's own copy takes precedence, so saving to ${pc.cyan(params.owner)} would not change`,
@@ -196,7 +196,7 @@ export async function pullfrogApi<T = Record<string, unknown>>(ctx: {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
-    const response = await fetch(`${PULLFROG_API_URL}${ctx.path}`, {
+    const response = await fetch(`${KATAK_API_URL}${ctx.path}`, {
       method: ctx.method || "GET",
       headers,
       body: ctx.body ? JSON.stringify(ctx.body) : null,

@@ -67,7 +67,7 @@ const XAI_AUTH_ENV = "GROK_AUTH_JSON";
  *
  * not used for codex auth in local dev — the sandbox is no-op there, so
  * the path doesn't matter. local dev keeps the existing $HOME path. */
-export const PULLFROG_DATA_DIR = "/var/lib/pullfrog";
+export const KATAK_DATA_DIR = "/var/lib/pullfrog";
 
 interface OpenCodeOAuthEntry {
   type: "oauth";
@@ -341,7 +341,7 @@ export function installCodexHome(): InstalledCodexHome | null {
 function resolveDataHome(): string {
   if (process.env.CI !== "true") return join(homedir(), ".local", "share");
   bootstrapPullfrogDataDir();
-  return PULLFROG_DATA_DIR;
+  return KATAK_DATA_DIR;
 }
 
 function bootstrapPullfrogDataDir(): void {
@@ -360,14 +360,14 @@ function bootstrapPullfrogDataDir(): void {
   // `-n` (non-interactive) makes sudo fail-fast on locked-down runners
   // instead of prompting and timing out.
   try {
-    execFileSync("sudo", ["-n", "mkdir", "-p", PULLFROG_DATA_DIR], { stdio: "pipe" });
-    execFileSync("sudo", ["-n", "chown", `${user}:${primaryGroup}`, PULLFROG_DATA_DIR], {
+    execFileSync("sudo", ["-n", "mkdir", "-p", KATAK_DATA_DIR], { stdio: "pipe" });
+    execFileSync("sudo", ["-n", "chown", `${user}:${primaryGroup}`, KATAK_DATA_DIR], {
       stdio: "pipe",
     });
-    execFileSync("sudo", ["-n", "chmod", "700", PULLFROG_DATA_DIR], { stdio: "pipe" });
+    execFileSync("sudo", ["-n", "chmod", "700", KATAK_DATA_DIR], { stdio: "pipe" });
   } catch (err) {
     throw new Error(
-      `failed to bootstrap ${PULLFROG_DATA_DIR} (required for codex auth in CI): ${err instanceof Error ? err.message : String(err)}. ` +
+      `failed to bootstrap ${KATAK_DATA_DIR} (required for codex auth in CI): ${err instanceof Error ? err.message : String(err)}. ` +
         `the MCP shell's mount-namespace sandbox cannot protect the auth file when it lives under $HOME, ` +
         `and silently falling back would contradict the "three independent layers" claim in wiki/codex-auth.md. ` +
         `passwordless sudo is required for codex auth on this runner — either configure it, or remove ` +

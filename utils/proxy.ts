@@ -175,7 +175,7 @@ async function buildProxyTokenHeaders(ctx: {
  * no-card private repos silently fall through to BYOK.
  *
  * Skipped when:
- *   - `PULLFROG_MODEL` env override is set (BYOK escape hatch)
+ *   - `KATAK_MODEL` env override is set (BYOK escape hatch)
  *   - `proxyModel` is not set on the run context
  *   - no OIDC credentials available and not talking to a localhost API
  *
@@ -190,7 +190,7 @@ async function resolveProxyModel(ctx: {
   toolState: ToolState;
 }): Promise<void> {
   // env override = BYOK escape hatch, don't proxy
-  if (process.env.PULLFROG_MODEL?.trim()) return;
+  if (process.env.KATAK_MODEL?.trim()) return;
 
   if (!ctx.proxyModel) return;
 
@@ -370,7 +370,7 @@ export async function resolveTrialFallback(ctx: {
   // an explicit operator override is a deliberate pin — usually set to
   // REPRODUCE a credential failure — so silently serving it from the subsidy
   // would mask the very run it was set to produce.
-  if (process.env.PULLFROG_MODEL?.trim()) return false;
+  if (process.env.KATAK_MODEL?.trim()) return false;
   if (!ctx.oidcCredentials && !isLocalApiUrl()) return false;
 
   const key = await mintProxyKey({

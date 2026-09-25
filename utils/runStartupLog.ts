@@ -19,8 +19,8 @@ function resolveModelForLog(ctx: {
   payload: ResolvedPayload;
   resolvedModel: string | undefined;
 }): string {
-  const envModel = process.env.PULLFROG_MODEL?.trim();
-  if (envModel) return `${envModel} (override via PULLFROG_MODEL)`;
+  const envModel = process.env.KATAK_MODEL?.trim();
+  if (envModel) return `${envModel} (override via KATAK_MODEL)`;
   if (ctx.payload.proxyModel) return `${ctx.payload.proxyModel} (proxy)`;
   if (ctx.resolvedModel && ctx.payload.model && ctx.payload.model !== ctx.resolvedModel) {
     return `${ctx.resolvedModel} (resolved from ${ctx.payload.model})`;
@@ -50,9 +50,9 @@ function resolveEffortForLog(ctx: {
 }
 
 function resolveAgentForLog(ctx: { agentName: string; resolvedModel: string | undefined }): string {
-  const envAgent = process.env.PULLFROG_AGENT?.trim();
+  const envAgent = process.env.KATAK_AGENT?.trim();
   if (envAgent && envAgent === ctx.agentName) {
-    return `${ctx.agentName} (override via PULLFROG_AGENT)`;
+    return `${ctx.agentName} (override via KATAK_AGENT)`;
   }
   if (ctx.agentName === "claude" && ctx.resolvedModel) {
     return `${ctx.agentName} (auto-selected for ${ctx.resolvedModel})`;

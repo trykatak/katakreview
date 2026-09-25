@@ -113,11 +113,11 @@ const mcpHost = "127.0.0.1";
 const mcpEndpoint = "/mcp";
 
 function readEnvPort(): number | null {
-  const rawPort = process.env.PULLFROG_MCP_PORT;
+  const rawPort = process.env.KATAK_MCP_PORT;
   if (!rawPort) return null;
   const parsed = Number.parseInt(rawPort, 10);
   if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
-    throw new Error(`invalid PULLFROG_MCP_PORT: ${rawPort}`);
+    throw new Error(`invalid KATAK_MCP_PORT: ${rawPort}`);
   }
   return parsed;
 }

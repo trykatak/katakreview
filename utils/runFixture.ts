@@ -40,9 +40,9 @@ export async function run(inputsOrPrompt: Inputs | string): Promise<AgentResult>
     process.chdir(await mkdtemp(join(tmpdir(), "pullfrog-bootstrap-")));
 
     // optional pre-agent setup (e.g. seed symlinks for adversarial fixtures).
-    if (process.env.PULLFROG_TEST_REPO_SETUP) {
+    if (process.env.KATAK_TEST_REPO_SETUP) {
       log.info("» running repo setup commands...");
-      execSync(process.env.PULLFROG_TEST_REPO_SETUP, { cwd: tempDir, stdio: "pipe" });
+      execSync(process.env.KATAK_TEST_REPO_SETUP, { cwd: tempDir, stdio: "pipe" });
     }
 
     // tell main() to use the cloned tempDir instead of the GHA workspace path.

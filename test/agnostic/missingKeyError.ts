@@ -58,7 +58,7 @@ export const test: TestRunnerOptions = {
     // no-model path also refuses now (an unauthenticated opencode catalog no
     // longer counts as a credential), but with the generic "any provider key"
     // copy, which these validators don't match.
-    PULLFROG_MODEL: "moonshotai/kimi-k2",
+    KATAK_MODEL: "moonshotai/kimi-k2",
   },
   tags: ["agnostic"],
 };

@@ -1,3 +1,4 @@
+import "./utils/legacyEnv.ts";
 import { basename } from "node:path";
 import arg from "arg";
 import pc from "picocolors";

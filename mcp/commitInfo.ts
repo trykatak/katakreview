@@ -30,10 +30,10 @@ export function CommitInfoTool(ctx: ToolContext) {
 
       // format diff with line numbers and write to file
       const formatResult = formatFilesWithLineNumbers(files);
-      const tempDir = process.env.PULLFROG_TEMP_DIR;
+      const tempDir = process.env.KATAK_TEMP_DIR;
       if (!tempDir) {
         throw new Error(
-          "PULLFROG_TEMP_DIR not set - get_commit_info must run in pullfrog action context"
+          "KATAK_TEMP_DIR not set - get_commit_info must run in pullfrog action context"
         );
       }
       const diffFile = join(tempDir, `commit-${sha.slice(0, 7)}.diff`);

@@ -97,8 +97,8 @@ export const test: TestRunnerOptions = {
   validator,
   agents: ["opencode"],
   env: {
-    PULLFROG_MODEL: "openai/gpt-5.5",
-    PULLFROG_DISABLE_SECURITY_INSTRUCTIONS: "1",
+    KATAK_MODEL: "openai/gpt-5.5",
+    KATAK_DISABLE_SECURITY_INSTRUCTIONS: "1",
   },
   // forks + contributors without the Codex secret skip cleanly rather than
   // failing on `auth_materialized=✗` and (with fail-fast: true) cascading

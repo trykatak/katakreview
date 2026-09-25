@@ -14,7 +14,7 @@
  * - the sandbox stays ON (`approval_policy = "never"` rather than
  *   `--dangerously-bypass-approvals-and-sandbox`), so the native `apply_patch`
  *   tool is confined to the workspace even if the agent ignores instructions.
- * - `CODEX_HOME` holds auth.json under PULLFROG_DATA_DIR, which the MCP shell's
+ * - `CODEX_HOME` holds auth.json under KATAK_DATA_DIR, which the MCP shell's
  *   mount namespace tmpfs-overlays. NOTE codex exposes no path-deny surface of
  *   its own, so unlike claude this harness does NOT consume
  *   `ctx.secretDenyPaths` — the namespace overlay is the only layer here.
@@ -261,7 +261,7 @@ const CODEX_EFFORTS: readonly string[] = ["minimal", "low", "medium", "high", "x
  *
  * Only an OpenAI specifier is passed through. `resolveAgent` already routes on
  * provider, so a non-OpenAI model reaches this harness exactly one way — the
- * `PULLFROG_AGENT=codex` escape hatch, on a repo whose stored model is
+ * `KATAK_AGENT=codex` escape hatch, on a repo whose stored model is
  * something else. Forwarding it there is a guaranteed
  * `model_not_found` 400 before the first turn; falling back to codex's default
  * makes the override do the thing the operator asked for.

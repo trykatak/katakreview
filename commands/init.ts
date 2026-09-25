@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import * as p from "@clack/prompts";
 import arg from "arg";
 import pc from "picocolors";
-import { PULLFROG_API_URL, pullfrogApi } from "./_shared.ts";
+import { KATAK_API_URL, pullfrogApi } from "./_shared.ts";
 
 function link(text: string, url: string): string {
   return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
@@ -178,7 +178,7 @@ function installationConfigUrl(ctx: { owner: string; installationId: number; isO
  * an established one is redirected straight to that repo's page.
  */
 function consoleUrl(ctx: { owner: string; repo: string }) {
-  return `${PULLFROG_API_URL}/console/${ctx.owner}?repo=${encodeURIComponent(ctx.repo)}`;
+  return `${KATAK_API_URL}/console/${ctx.owner}?repo=${encodeURIComponent(ctx.repo)}`;
 }
 
 /**

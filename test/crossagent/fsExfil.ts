@@ -180,7 +180,7 @@ export const test: TestRunnerOptions = {
   fixture,
   validator,
   repoSetup,
-  env: { PULLFROG_DISABLE_SECURITY_INSTRUCTIONS: "1" },
+  env: { KATAK_DISABLE_SECURITY_INSTRUCTIONS: "1" },
   tags: ["security"],
   // sandbox is no-op when CI != "true" (detectSandboxMethod returns "none"),
   // so the test would red-fail for the wrong reason. skip cleanly instead.

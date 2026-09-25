@@ -129,7 +129,7 @@ const OPENCODE_GATEWAY_PATH: Record<string, string> = { anthropic: "/v1" };
  * `anthropic/*` normally never reaches here — `resolveAgent` routes it to
  * claude-code, which reads ANTHROPIC_BASE_URL natively — but keying off the
  * resolved specifier rather than the harness means it still holds on the paths
- * that do send a Claude model through opencode (`PULLFROG_AGENT=opencode`).
+ * that do send a Claude model through opencode (`KATAK_AGENT=opencode`).
  */
 export function providerGatewayOverride(
   model: string | undefined
@@ -300,7 +300,7 @@ export async function installOpencodeCli(params: { binPath: string }): Promise<s
 
 // ── model auto-select fallback ──────────────────────────────────────────────────
 //
-// steps 1–2 of model resolution (PULLFROG_MODEL env, slug resolution) happen
+// steps 1–2 of model resolution (KATAK_MODEL env, slug resolution) happen
 // in resolveModel() in utils/agent.ts before the agent runs. this is step 3:
 // auto-select using the authorized model set captured in main.ts via
 // `opencode models` introspection.

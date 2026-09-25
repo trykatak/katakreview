@@ -54,8 +54,8 @@ interface NpmRegistryData {
  * The temp directory will be cleaned up by the OS automatically
  */
 export async function installFromNpmTarball(params: InstallFromNpmTarballParams): Promise<string> {
-  const tempDir = process.env.PULLFROG_TEMP_DIR;
-  if (!tempDir) throw new Error("PULLFROG_TEMP_DIR is not set");
+  const tempDir = process.env.KATAK_TEMP_DIR;
+  if (!tempDir) throw new Error("KATAK_TEMP_DIR is not set");
 
   // one extraction root per package. npm tarballs all unpack to `package/`, so a
   // shared root leaves several CLIs interleaved in one tree and runs each
@@ -212,8 +212,8 @@ async function fetchWithRetry(
  * The temp directory will be cleaned up by the OS automatically
  */
 export async function installFromGithub(params: InstallFromGithubParams): Promise<string> {
-  // use a deterministic subdir in PULLFROG_TEMP_DIR so repeated calls are cached
-  const pullfrogTemp = process.env.PULLFROG_TEMP_DIR;
+  // use a deterministic subdir in KATAK_TEMP_DIR so repeated calls are cached
+  const pullfrogTemp = process.env.KATAK_TEMP_DIR;
   const installDir = pullfrogTemp
     ? join(pullfrogTemp, `github-${params.owner}-${params.repo}`)
     : await mkdtemp(join(tmpdir(), `${params.owner}-${params.repo}-github-`));
@@ -294,8 +294,8 @@ export async function installFromGithub(params: InstallFromGithubParams): Promis
 export async function installFromGithubTarball(
   params: InstallFromGithubTarballParams
 ): Promise<string> {
-  const tempDir = process.env.PULLFROG_TEMP_DIR;
-  if (!tempDir) throw new Error("PULLFROG_TEMP_DIR is not set");
+  const tempDir = process.env.KATAK_TEMP_DIR;
+  if (!tempDir) throw new Error("KATAK_TEMP_DIR is not set");
 
   const cliPath = join(tempDir, params.executablePath);
 
@@ -383,8 +383,8 @@ export async function installFromGithubTarball(
 export async function installFromDirectTarball(
   params: InstallFromDirectTarballParams
 ): Promise<string> {
-  const tempDir = process.env.PULLFROG_TEMP_DIR;
-  if (!tempDir) throw new Error("PULLFROG_TEMP_DIR is not set");
+  const tempDir = process.env.KATAK_TEMP_DIR;
+  if (!tempDir) throw new Error("KATAK_TEMP_DIR is not set");
 
   const extractDir = join(tempDir, "direct-package");
   const cliPath = join(extractDir, params.executablePath);
@@ -439,8 +439,8 @@ export async function installFromDirectTarball(
  * The temp directory will be cleaned up by the OS automatically
  */
 export async function installFromCurl(params: InstallFromCurlParams): Promise<string> {
-  const tempDir = process.env.PULLFROG_TEMP_DIR;
-  if (!tempDir) throw new Error("PULLFROG_TEMP_DIR is not set");
+  const tempDir = process.env.KATAK_TEMP_DIR;
+  if (!tempDir) throw new Error("KATAK_TEMP_DIR is not set");
 
   const cliPath = join(tempDir, ".local", "bin", params.executableName);
 

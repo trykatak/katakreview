@@ -48,7 +48,7 @@ import {
   GROK_AUTH_SECRET,
   getGhToken,
   handleCancel,
-  PULLFROG_API_URL,
+  KATAK_API_URL,
   promptScope,
   setActiveSpin,
   setPullfrogSecret,
@@ -319,7 +319,7 @@ async function runCodexAuth(parsed: ReturnType<typeof parseCodexArgs>): Promise<
         ``,
         `${pc.dim("note:")} if your ChatGPT account doesn't have device-code auth enabled,`,
         `Codex will exit early. enable it at ${pc.cyan(`https://chatgpt.com/#settings/Security`)}`,
-        `then re-run ${pc.cyan(`${process.env.PULLFROG_BIN_NAME || "pullfrog"} auth codex`)}.`,
+        `then re-run ${pc.cyan(`${process.env.KATAK_BIN_NAME || "pullfrog"} auth codex`)}.`,
       ].join("\n")
     );
 
@@ -407,7 +407,7 @@ async function runCodexAuth(parsed: ReturnType<typeof parseCodexArgs>): Promise<
     if (!result.saved) {
       spin.stop(pc.red("could not save secret"));
       p.log.warn(
-        `${result.error}\n  ${pc.dim("set it manually at:")} ${PULLFROG_API_URL}/console/${remote.owner}`
+        `${result.error}\n  ${pc.dim("set it manually at:")} ${KATAK_API_URL}/console/${remote.owner}`
       );
       process.exit(1);
     }
@@ -583,7 +583,7 @@ async function runClaudeAuth(parsed: ReturnType<typeof parseCodexArgs>): Promise
     if (!result.saved) {
       spin.stop(pc.red("could not save secret"));
       p.log.warn(
-        `${result.error}\n  ${pc.dim("set it manually at:")} ${PULLFROG_API_URL}/console/${remote.owner}`
+        `${result.error}\n  ${pc.dim("set it manually at:")} ${KATAK_API_URL}/console/${remote.owner}`
       );
       process.exit(1);
     }
@@ -756,7 +756,7 @@ async function runGrokAuth(parsed: ReturnType<typeof parseCodexArgs>): Promise<v
     if (!result.saved) {
       spin.stop(pc.red("could not save secret"));
       p.log.warn(
-        `${result.error}\n  ${pc.dim("set it manually at:")} ${PULLFROG_API_URL}/console/${remote.owner}`
+        `${result.error}\n  ${pc.dim("set it manually at:")} ${KATAK_API_URL}/console/${remote.owner}`
       );
       process.exit(1);
     }

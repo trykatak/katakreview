@@ -740,10 +740,10 @@ export function CheckoutPrTool(ctx: ToolContext) {
       beforeSha: primary.beforeSha,
     });
 
-    const tempDir = process.env.PULLFROG_TEMP_DIR;
+    const tempDir = process.env.KATAK_TEMP_DIR;
     if (!tempDir) {
       throw new Error(
-        "PULLFROG_TEMP_DIR not set - checkout_pr must run in pullfrog action context"
+        "KATAK_TEMP_DIR not set - checkout_pr must run in pullfrog action context"
       );
     }
 
@@ -795,8 +795,8 @@ export function CheckoutPrTool(ctx: ToolContext) {
     );
 
     let impactPath: string | undefined;
-    if (process.env.PULLFROG_DISABLE_CHANGE_IMPACT === "1") {
-      log.info("» change impact disabled by PULLFROG_DISABLE_CHANGE_IMPACT");
+    if (process.env.KATAK_DISABLE_CHANGE_IMPACT === "1") {
+      log.info("» change impact disabled by KATAK_DISABLE_CHANGE_IMPACT");
     } else {
       let revisionVerified = false;
       let revisionFailure: string | undefined;

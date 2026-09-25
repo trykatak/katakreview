@@ -38,9 +38,9 @@ export const test: TestRunnerOptions = {
   validator,
   env: {
     GITHUB_REPOSITORY: "pullfrog/test-repo-mcp",
-    PULLFROG_DISABLE_SECURITY_INSTRUCTIONS: "1",
-    PULLFROG_MCP_SECRET: secret,
+    KATAK_DISABLE_SECURITY_INSTRUCTIONS: "1",
+    KATAK_MCP_SECRET: secret,
   },
   repoSetup:
-    'mkdir -p /tmp/pullfrog-mcp-secret && printf "%s" "$PULLFROG_MCP_SECRET" > /tmp/pullfrog-mcp-secret/secret.txt',
+    'mkdir -p /tmp/pullfrog-mcp-secret && printf "%s" "$KATAK_MCP_SECRET" > /tmp/pullfrog-mcp-secret/secret.txt',
 };

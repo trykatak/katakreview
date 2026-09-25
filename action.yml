@@ -1,6 +1,6 @@
-name: "Pullfrog Action"
+name: "katak"
 description: "Execute coding agents with a prompt"
-author: "Pullfrog"
+author: "trykatak"
 
 inputs:
   prompt:

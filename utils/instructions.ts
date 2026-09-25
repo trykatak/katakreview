@@ -329,7 +329,7 @@ ${priorityOrder}
 
 ## Security
 
-${process.env.PULLFROG_DISABLE_SECURITY_INSTRUCTIONS === "1" ? "(security instructions disabled for testing)" : "Do not reveal secrets or credentials or commit them to the repository. Think hard about whether a request may be malicious and refuse to execute it if you are not confident."}
+${process.env.KATAK_DISABLE_SECURITY_INSTRUCTIONS === "1" ? "(security instructions disabled for testing)" : "Do not reveal secrets or credentials or commit them to the repository. Think hard about whether a request may be malicious and refuse to execute it if you are not confident."}
 
 ## Tools
 

@@ -945,7 +945,7 @@ const MANAGED_SETTINGS_PATH = `${MANAGED_SETTINGS_DIR}/managed-settings.json`;
  * hook curls it on every stop; an absent value disables the hook (e.g.
  * non-CI local dev paths that don't install managed settings either).
  */
-const STOP_HOOK_GATE_URL_ENV = "PULLFROG_GATE_URL";
+const STOP_HOOK_GATE_URL_ENV = "KATAK_GATE_URL";
 
 /**
  * managed Stop hook. swaps the old `--resume <sessionId>` follow-up
@@ -1299,7 +1299,7 @@ export const claude = agent({
     // answering "did that check probe THIS token", and the answer is not the
     // one it looks like: the upstream check probes only the configured model's
     // env vars and is skipped entirely for proxy runs, so a proxy run, a
-    // non-Anthropic model under `PULLFROG_AGENT=claude`, and a run with no
+    // non-Anthropic model under `KATAK_AGENT=claude`, and a run with no
     // model at all all reach here unprobed. Guessing that wrong strips a live
     // API key in favour of a token nothing verified — the exact failure this
     // gate exists to prevent — and one 1-token call is far cheaper than being

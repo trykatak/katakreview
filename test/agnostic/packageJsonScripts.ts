@@ -90,6 +90,6 @@ export const test: TestRunnerOptions = {
   name: "pkg-json-scripts",
   fixture,
   validator,
-  env: { PULLFROG_DISABLE_SECURITY_INSTRUCTIONS: "1" },
+  env: { KATAK_DISABLE_SECURITY_INSTRUCTIONS: "1" },
   tags: ["agnostic", "security"],
 };

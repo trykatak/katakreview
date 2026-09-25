@@ -1,5 +1,5 @@
-# PULLFROG ACTION — DO NOT EDIT EXCEPT WHERE INDICATED
-name: Pullfrog
+# KATAK ACTION — manual dogfood run against the checked-out commit
+name: katak
 run-name: ${{ inputs.name || github.workflow }}
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  pullfrog:
+  katak:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -26,12 +26,11 @@ jobs:
         with:
           fetch-depth: 1
       - name: Run agent
-        uses: pullfrog/pullfrog@main
+        uses: ./
         with:
           prompt: ${{ inputs.prompt }}
         env:
           API_URL: ${{ secrets.API_URL }}
-          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           # add any additional keys your agent(s) need
           # optionally, comment out any you won't use
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

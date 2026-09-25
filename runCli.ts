@@ -19,7 +19,7 @@ interface RuntimeContext {
 }
 
 const NPM_REGISTRY = "https://registry.npmjs.org";
-const FALLBACK_PACKAGE_SPEC = `pullfrog@^${actionPackageJson.version}`;
+const FALLBACK_PACKAGE_SPEC = `katakreview@^${actionPackageJson.version}`;
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -269,12 +269,12 @@ function runLocalCli(context: RuntimeContext, cliArgs: string[]): void {
 }
 
 function runPullfrogCliInner(context: RuntimeContext, cliArgs: string[]): void {
-  if (process.env.PULLFROG_FORCE_LOCAL_CLI === "1") {
+  if (process.env.KATAK_FORCE_LOCAL_CLI === "1") {
     runLocalCli(context, cliArgs);
     return;
   }
 
-  if (context.actionRef === "main" && context.actionRepository === "pullfrog/pullfrog") {
+  if (context.actionRef === "main" && context.actionRepository === "trykatak/katakreview") {
     runLocalCli(context, cliArgs);
     return;
   }

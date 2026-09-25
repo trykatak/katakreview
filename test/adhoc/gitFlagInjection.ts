@@ -108,5 +108,5 @@ export const test: TestRunnerOptions = {
   validator,
   tags: ["adhoc", "security"],
   agents: ["opencode"],
-  env: { PULLFROG_DISABLE_SECURITY_INSTRUCTIONS: "1" },
+  env: { KATAK_DISABLE_SECURITY_INSTRUCTIONS: "1" },
 };

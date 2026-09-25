@@ -2,6 +2,8 @@ name: Test
 
 on:
   pull_request:
+  # e2e jobs (agents/agnostic) need LLM + cloud secrets — manual trigger only
+  workflow_dispatch:
 
 jobs:
   test:
@@ -19,6 +21,7 @@ jobs:
       - run: pnpm test
 
   agents:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -82,10 +85,10 @@ jobs:
       AWS_REGION: us-east-1
       BEDROCK_MODEL_ID: us.anthropic.claude-sonnet-4-6
       VERTEX_SERVICE_ACCOUNT_JSON: ${{ secrets.VERTEX_SERVICE_ACCOUNT_JSON }}
-      GOOGLE_CLOUD_PROJECT: pullfrog
+      GOOGLE_CLOUD_PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
       VERTEX_LOCATION: global
       VERTEX_MODEL_ID: gemini-2.5-flash
-      PULLFROG_MODEL: ${{ vars.PULLFROG_MODEL }}
+      KATAK_MODEL: ${{ vars.KATAK_MODEL }}
       # CI smoke-testing shortcut only — production stores this in Pullfrog's
       # per-org secret store (Postgres), set via `pullfrog auth codex`. GH
       # Actions secrets are immutable at runtime so the post-hook can't write
@@ -108,6 +111,7 @@ jobs:
       - run: pnpm runtest ${{ matrix.test }} ${{ matrix.agent }}
 
   agnostic:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

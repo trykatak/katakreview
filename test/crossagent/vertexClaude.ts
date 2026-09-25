@@ -7,5 +7,5 @@
  *   name: "vertex-claude"
  *   agents: ["claude"]
  *   prompt: Call set_output with "VERTEX CLAUDE SMOKE PASSED".
- *   env: PULLFROG_MODEL=vertex/byok, VERTEX_MODEL_ID=claude-opus-4-1@20250805, VERTEX_LOCATION=global
+ *   env: KATAK_MODEL=vertex/byok, VERTEX_MODEL_ID=claude-opus-4-1@20250805, VERTEX_LOCATION=global
  */

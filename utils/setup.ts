@@ -18,7 +18,7 @@ export interface SetupOptions {
  */
 export function createTempDirectory(): string {
   const sharedTempDir = mkdtempSync(join(tmpdir(), "pullfrog-"));
-  process.env.PULLFROG_TEMP_DIR = sharedTempDir;
+  process.env.KATAK_TEMP_DIR = sharedTempDir;
   log.info(`» created temp dir at ${sharedTempDir}`);
   return sharedTempDir;
 }

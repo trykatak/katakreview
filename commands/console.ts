@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import arg from "arg";
 import { resolveTarget, scopeArgs } from "./_configuration.ts";
-import { PULLFROG_API_URL } from "./_shared.ts";
+import { KATAK_API_URL } from "./_shared.ts";
 
 export async function runCli(input: { args: string[]; prog: string; showHelp?: boolean }) {
   const args = arg({ ...scopeArgs, "--no-browser": Boolean }, { argv: input.args });
@@ -15,7 +15,7 @@ export async function runCli(input: { args: string[]; prog: string; showHelp?: b
   const target = resolveTarget({ org: args["--org"], repo: args["--repo"] });
   const url = new URL(
     `/console/${encodeURIComponent(target.owner)}${target.repo ? `/${encodeURIComponent(target.repo)}` : ""}`,
-    PULLFROG_API_URL
+    KATAK_API_URL
   );
   console.log(url.href);
   if (args["--no-browser"] || !process.stdout.isTTY) return;

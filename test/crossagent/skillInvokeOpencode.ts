@@ -41,7 +41,7 @@ export const test: TestRunnerOptions = {
   agents: ["opencode"],
   repoSetup,
   env: {
-    PULLFROG_DISABLE_SECURITY_INSTRUCTIONS: "1",
-    PULLFROG_MODEL: "anthropic/claude-sonnet-4-6",
+    KATAK_DISABLE_SECURITY_INSTRUCTIONS: "1",
+    KATAK_MODEL: "anthropic/claude-sonnet-4-6",
   },
 };

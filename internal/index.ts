@@ -88,7 +88,7 @@ export type {
 } from "../utils/buildPullfrogFooter.ts";
 export {
   buildPullfrogFooter,
-  PULLFROG_DIVIDER,
+  KATAK_DIVIDER,
   stripExistingFooter,
 } from "../utils/buildPullfrogFooter.ts";
 export type { CodexAuthBody } from "../utils/codexOAuth.ts";

@@ -2014,7 +2014,7 @@ export function getProviderGatewayUrl(specifier: string | undefined): string | u
  * every published foundation ID and is conservative for ARN-form IDs: ARN
  * names that don't include "anthropic" as their own dot-segment route to
  * opencode by default. operators using ARN-form IDs whose backing model is
- * Anthropic should set `PULLFROG_AGENT=claude` to force the right route, or
+ * Anthropic should set `KATAK_AGENT=claude` to force the right route, or
  * include the foundation segment in the profile name.
  */
 export function isBedrockAnthropicId(bedrockModelId: string): boolean {

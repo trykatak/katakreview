@@ -89,7 +89,7 @@ import { dirtyTrackedPaths, restoreDirtiedSince } from "../utils/worktree.ts";
 import { GIT_NATIVE_READ_DENY_OPENCODE, GIT_NATIVE_WRITE_DENY_OPENCODE } from "./nativeFsDenies.ts";
 import {
   buildOpencodeSubagentGateSource,
-  PULLFROG_OPENCODE_GATE_PLUGIN_FILENAME,
+  KATAK_OPENCODE_GATE_PLUGIN_FILENAME,
 } from "./opencodePlugin.ts";
 import {
   autoSelectModel,
@@ -1121,8 +1121,8 @@ function startInnerActivityWatchdog(params: {
       : watchdogBudgetMs(
           compiledMs,
           params.ctx.diagnostic.sawModelOutput
-            ? "PULLFROG_E2E_ACTIVITY_TIMEOUT_MS"
-            : "PULLFROG_E2E_FIRST_EVENT_TIMEOUT_MS"
+            ? "KATAK_E2E_ACTIVITY_TIMEOUT_MS"
+            : "KATAK_E2E_FIRST_EVENT_TIMEOUT_MS"
         );
     if (idleMs <= budgetMs) return;
     fired = true;
@@ -1213,7 +1213,7 @@ export const opencode = agent({
     const opencodePluginDir = join(homeEnv.XDG_CONFIG_HOME, "opencode", "plugin");
     mkdirSync(opencodePluginDir, { recursive: true });
     writeFileSync(
-      join(opencodePluginDir, PULLFROG_OPENCODE_GATE_PLUGIN_FILENAME),
+      join(opencodePluginDir, KATAK_OPENCODE_GATE_PLUGIN_FILENAME),
       buildOpencodeSubagentGateSource(ctx.subagentDeniedTools)
     );
 

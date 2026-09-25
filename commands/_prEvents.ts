@@ -16,7 +16,7 @@ import {
   CLI_UPGRADE_MESSAGE,
   CliContractError,
 } from "../cliContract.ts";
-import { PULLFROG_API_URL } from "./_shared.ts";
+import { KATAK_API_URL } from "./_shared.ts";
 
 export type StreamEvent = {
   cursor: string;
@@ -83,7 +83,7 @@ export async function pollPrEvents(
   if (ctx.signal?.aborted) controller.abort();
   else ctx.signal?.addEventListener("abort", onCallerAbort, { once: true });
   try {
-    const response = await fetch(`${PULLFROG_API_URL}/api/cli/pr-events?${params}`, {
+    const response = await fetch(`${KATAK_API_URL}/api/cli/pr-events?${params}`, {
       headers: {
         authorization: `Bearer ${ctx.token}`,
         [CLI_CONTRACT_HEADER]: CLI_CONTRACT_VERSION,
@@ -112,7 +112,7 @@ export async function pollPrEvents(
 // ── cursor store ──
 
 function stateDir(): string {
-  return process.env.PULLFROG_STATE_DIR || join(homedir(), ".pullfrog");
+  return process.env.KATAK_STATE_DIR || join(homedir(), ".pullfrog");
 }
 
 function cursorPath(target: PrTarget): string {

@@ -25,8 +25,8 @@ export const test: TestRunnerOptions = {
   fixture,
   validator,
   env: {
-    PULLFROG_DISABLE_SECURITY_INSTRUCTIONS: "1",
-    PULLFROG_MODEL: "vertex/byok",
+    KATAK_DISABLE_SECURITY_INSTRUCTIONS: "1",
+    KATAK_MODEL: "vertex/byok",
     VERTEX_MODEL_ID: "gemini-2.5-flash",
     VERTEX_LOCATION: "global",
   },

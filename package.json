@@ -1,6 +1,6 @@
 {
-  "name": "pullfrog",
-  "version": "0.1.82",
+  "name": "katakreview",
+  "version": "1.0.0",
   "cliContractVersion": "1",
   "type": "module",
   "bin": {
@@ -72,19 +72,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pullfrog/pullfrog.git"
+    "url": "git+https://github.com/trykatak/katakreview.git"
   },
   "keywords": [
     "github-actions",
     "ai-coding-agent",
     "code-review"
   ],
-  "author": "Pullfrog <support@pullfrog.com>",
+  "author": "trykatak",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pullfrog/pullfrog/issues"
+    "url": "https://github.com/trykatak/katakreview/issues"
   },
-  "homepage": "https://github.com/pullfrog/pullfrog#readme",
+  "homepage": "https://github.com/trykatak/katakreview#readme",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

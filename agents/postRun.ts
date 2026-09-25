@@ -317,12 +317,12 @@ export async function finalizeAgentResult<R extends AgentResult>(params: {
  * the agent rarely discovers anything generalizable to next runs, so the
  * reflection turn is dead weight. initial `Review` still touches fresh PR
  * territory and benefits; `Build` / `Fix` / `AddressReviews` definitely do.
- * `PULLFROG_DISABLE_LEARNINGS_REFLECTION=1` disables only this optional nudge.
+ * `KATAK_DISABLE_LEARNINGS_REFLECTION=1` disables only this optional nudge.
  */
 const REFLECTION_SKIP_MODES: ReadonlySet<string> = new Set(["IncrementalReview"]);
 
 function shouldRunReflection(mode: string | undefined): boolean {
-  if (process.env.PULLFROG_DISABLE_LEARNINGS_REFLECTION === "1") return false;
+  if (process.env.KATAK_DISABLE_LEARNINGS_REFLECTION === "1") return false;
   if (!mode) return true;
   return !REFLECTION_SKIP_MODES.has(mode);
 }

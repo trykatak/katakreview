@@ -946,8 +946,8 @@ function spillGitOutput(params: {
   output: string;
   lineCount: number;
 }): { output: string; outputPath: string } {
-  const tempDir = process.env.PULLFROG_TEMP_DIR;
-  if (!tempDir) throw new Error("PULLFROG_TEMP_DIR not set");
+  const tempDir = process.env.KATAK_TEMP_DIR;
+  if (!tempDir) throw new Error("KATAK_TEMP_DIR not set");
   const outputPath = join(tempDir, `git-${params.command}-${randomUUID().slice(0, 8)}.txt`);
   writeFileSync(outputPath, params.output);
   const previewByLines = params.output.split("\n").slice(0, OVERFLOW_PREVIEW_LINES).join("\n");

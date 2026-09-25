@@ -6,7 +6,7 @@ import {
   resolveDisplayAlias,
 } from "../models.ts";
 
-export const PULLFROG_DIVIDER = "<!-- PULLFROG_DIVIDER_DO_NOT_REMOVE_PLZ -->";
+export const KATAK_DIVIDER = "<!-- KATAK_DIVIDER_DO_NOT_REMOVE_PLZ -->";
 
 // SELFHOST (katakpull): no upstream logo/branding — plain text attribution only.
 
@@ -147,7 +147,7 @@ function formatModelLabel(params: {
  * reader is being asked to discount findings about their own code, which a
  * subscript pipe-separated fragment cannot carry.
  *
- * Emitted AFTER `PULLFROG_DIVIDER` so `stripExistingFooter` removes it on every
+ * Emitted AFTER `KATAK_DIVIDER` so `stripExistingFooter` removes it on every
  * edit. The progress comment is rewritten many times per run; anything placed
  * before the marker would survive each strip and accumulate.
  *
@@ -218,14 +218,14 @@ export function buildPullfrogFooter(params: BuildPullfrogFooterParams): string {
   const disclosure =
     params.clamped?.reason === "trial" ? `${buildTrialDisclosure(params.owner)}\n\n` : "";
 
-  return `\n\n${PULLFROG_DIVIDER}\n${disclosure}<sup>${allParts.join(" ｜ ")}</sup>`;
+  return `\n\n${KATAK_DIVIDER}\n${disclosure}<sup>${allParts.join(" ｜ ")}</sup>`;
 }
 
 /**
  * strip any existing pullfrog footer from a comment body
  */
 export function stripExistingFooter(body: string): string {
-  const dividerIndex = body.indexOf(PULLFROG_DIVIDER);
+  const dividerIndex = body.indexOf(KATAK_DIVIDER);
   if (dividerIndex === -1) {
     return body;
   }
