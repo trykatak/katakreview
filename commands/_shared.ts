@@ -13,7 +13,7 @@ import {
 } from "../cliContract.ts";
 import { vercelBypassSecretFor } from "../utils/vercelBypass.ts";
 
-export const KATAK_API_URL = (process.env.KATAK_API_URL || "https://pullfrog.com").replace(
+export const KATAK_API_URL = (process.env.KATAK_API_URL || "https://api.katak.review").replace(
   /\/+$/,
   ""
 );
