@@ -27,7 +27,6 @@ function buildPrBodyWithFooter(ctx: ToolContext, body: string): string {
       ? { owner: ctx.repo.owner, repo: ctx.repo.name, runId: ctx.runId, jobId: ctx.jobId }
       : undefined,
     model: ctx.toolState.model,
-    fallbackFrom: ctx.toolState.modelFallback?.from,
     clamped: ctx.toolState.modelClamped,
     unselectedProxyDefault: ctx.toolState.unselectedProxyDefault,
     oss: ctx.oss,

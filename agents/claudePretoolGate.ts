@@ -41,6 +41,12 @@
  */
 export const CLAUDE_PRETOOL_GATE_FILENAME = "pullfrog-pretool-gate.mjs" as const;
 
+/** the Stop-hook script and the flag `--settings` JSON, both written into the
+ * per-run tmpdir alongside the gate. named here so the hook-asset seal
+ * (nativeFsDenies.ts) and the writers in claude.ts share one source. */
+export const CLAUDE_STOP_HOOK_FILENAME = "pullfrog-stop-hook.sh" as const;
+export const CLAUDE_SETTINGS_FILENAME = "pullfrog-claude-settings.json" as const;
+
 /**
  * Build the gate script source, embedding the run's derived denied-tool set
  * (see `subagentDeniedToolNames` in action/agents/subagentToolGates.ts).
@@ -112,18 +118,18 @@ process.stdin.on("end", () => {
  * settings JSON file or a JSON string`), but we use a path so the script
  * and its config sit side-by-side under `ctx.tmpdir`.
  *
- * `execToolDenyRules` are the native exec tools (Bash/Monitor/REPL/Workflow +
- * their `Agent(...)` forms) to deny at a settings-source rule — the
- * authoritative, bypass-immune layer. `--disallowedTools` alone (a `cliArg`
- * deny) was observed to leak under `--dangerously-skip-permissions`, so the
- * deny is carried here too. The single consumer is `buildClaudeSettings`, which
+ * `denyRules` are the native tools to deny (`CLAUDE_DENIED_TOOLS` + their
+ * `Agent(...)` forms) at a settings-source rule — the authoritative,
+ * bypass-immune layer. `--disallowedTools` alone (a `cliArg` deny) was observed
+ * to leak under `--dangerously-skip-permissions`, so the deny is carried here
+ * too. The single consumer is `buildClaudeSettings`, which
  * spreads `hooks` and folds `permissions.deny` into its richer deny list; that
  * one object is then written to BOTH the `--settings` flag and the `/etc`
  * managed file, which is what keeps the two surfaces from drifting (#1179).
  */
 export function buildClaudePretoolGateSettings(
   scriptAbsolutePath: string,
-  execToolDenyRules: string[]
+  denyRules: string[]
 ): {
   hooks: {
     PreToolUse: Array<{
@@ -152,6 +158,6 @@ export function buildClaudePretoolGateSettings(
         },
       ],
     },
-    permissions: { deny: execToolDenyRules },
+    permissions: { deny: denyRules },
   };
 }

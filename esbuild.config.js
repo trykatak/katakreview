@@ -91,13 +91,6 @@ await build({
   target: "node20",
 });
 
-await build({
-  ...sharedConfig,
-  entryPoints: ["./yes/index.ts"],
-  outfile: "./dist/yes.js",
-  target: "node20",
-});
-
 // prepend shebang after strip (esbuild banner can't guarantee line 1 placement)
 const cliPath = "./dist/cli.mjs";
 const cliContent = readFileSync(cliPath, "utf8");

@@ -21,7 +21,7 @@ export type CodexAuthJson = CodexAuthBody;
 
 /** force one refresh round-trip against the OAuth provider so the saved
  * credential carries the freshest refresh token. used right after `codex
- * login --device-auth` and again any time we want to bump the chain before
+ * login` and again any time we want to bump the chain before
  * persisting (avoids the user's laptop refreshing first and burning ours).
  * Server-side rotation at run-context uses `refreshCodexAuthBody` directly. */
 export async function refreshCodexAuth(auth: CodexAuth): Promise<CodexAuth> {
@@ -36,6 +36,9 @@ export type ProgressEvent =
   | { kind: "cancel" };
 
 interface RunOptions {
+  /** sign in with a one-time code instead of Codex's browser redirect to
+   * localhost — the only login that works when the browser is on another machine. */
+  deviceAuth: boolean;
   /** abort the whole flow when true is returned. polled before each retry. */
   shouldRetry: () => Promise<boolean>;
   /** observe progress for UI rendering. */
@@ -53,27 +56,27 @@ interface RunOptions {
    * escapes Codex emitted); the caller is responsible for stripping/styling.
    */
   onChildLine?: (line: string, stream: "stdout" | "stderr") => void;
-  /** how long a single device-auth attempt is allowed to run. */
+  /** how long a single login attempt is allowed to run. */
   perAttemptTimeoutMs?: number;
 }
 
 /**
- * mint a fresh Codex subscription credential by running `codex login
- * --device-auth` against an isolated `CODEX_HOME`. the user's global
+ * mint a fresh Codex subscription credential by running `codex login`
+ * against an isolated `CODEX_HOME`. the user's global
  * `~/.codex/auth.json` is never touched; on success or failure, the
  * temporary home is cleaned up.
  *
- * the caller controls retry behavior via `shouldRetry`: when device auth
- * exits without writing `auth.json` (most commonly because the user needed
- * to enable device-code auth on their ChatGPT account first), the function
- * invokes `shouldRetry()` to decide whether to spin up another attempt.
+ * the caller controls retry behavior via `shouldRetry`: when the login
+ * exits without writing `auth.json` (under `deviceAuth`, most commonly because
+ * the user needed to enable device-code auth on their ChatGPT account first),
+ * the function invokes `shouldRetry()` to decide whether to spin up another attempt.
  */
 export async function mintCodexAuth(options: RunOptions): Promise<CodexAuth> {
   // mkdtempSync already creates the dir with the default 0o700 perms on
   // posix; an extra mkdirSync would just be ceremony.
   const codexHome = mkdtempSync(join(tmpdir(), "pullfrog-codex-"));
   try {
-    // device auth requires file-backed credentials; otherwise Codex routes the
+    // the login needs file-backed credentials; otherwise Codex routes the
     // refresh token into the OS keyring and we can't observe / persist it.
     writeFileSync(join(codexHome, "config.toml"), 'cli_auth_credentials_store = "file"\n', {
       mode: 0o600,
@@ -84,8 +87,9 @@ export async function mintCodexAuth(options: RunOptions): Promise<CodexAuth> {
 
     while (true) {
       options.onProgress?.({ kind: "start", attempt });
-      const result = await runDeviceAuth({
+      const result = await runCodexLogin({
         codexHome,
+        deviceAuth: options.deviceAuth,
         timeoutMs: options.perAttemptTimeoutMs ?? 15 * 60 * 1000,
         childStdio: options.childStdio ?? "inherit",
         onChildLine: options.onChildLine,
@@ -112,17 +116,18 @@ export async function mintCodexAuth(options: RunOptions): Promise<CodexAuth> {
   }
 }
 
-interface DeviceAuthResult {
+interface CodexLoginResult {
   exitCode: number;
   signal: NodeJS.Signals | null;
   /** true if the attempt was killed by our per-attempt timeout (vs. exited
    * naturally or was interrupted by the user). lets callers distinguish
-   * "user walked away" from "user closed the device flow early". */
+   * "user walked away" from "user closed the login early". */
   timedOut: boolean;
 }
 
-interface DeviceAuthInput {
+interface CodexLoginInput {
   codexHome: string;
+  deviceAuth: boolean;
   timeoutMs: number;
   childStdio: "inherit" | "pipe";
   onChildLine?: ((line: string, stream: "stdout" | "stderr") => void) | undefined;
@@ -132,8 +137,6 @@ interface DeviceAuthInput {
  * subprocess. Codex usually exits cleanly on SIGTERM, but if it ignores it we
  * don't want the CLI pinned forever. */
 const SIGTERM_GRACE_MS = 5_000;
-
-const DEVICE_AUTH_ARGS = ["login", "--device-auth"];
 
 /** what Windows falls back to when `PATHEXT` is unset. */
 const DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD";
@@ -228,17 +231,17 @@ function codexNotFoundMessage(env: NodeJS.ProcessEnv): string {
   return `codex CLI not found on PATH (searched every PATH entry for codex with ${extensions}). a working \`codex --version\` in a shell does not prove Node can spawn it. ${install}`;
 }
 
-/** spawn `codex login --device-auth` with stdin closed so Codex doesn't hang
+/** spawn `codex login` with stdin closed so Codex doesn't hang
  * waiting for input. by default inherits stdout/stderr so the user sees the
- * device URL + one-time code Codex prints; when `pipe`d, lines are forwarded
+ * sign-in URL (and, under `deviceAuth`, the one-time code) Codex prints; when `pipe`d, lines are forwarded
  * to `onChildLine` so the caller can re-style them. on per-attempt timeout,
  * sends SIGTERM and escalates to SIGKILL after a short grace.
  */
-function runDeviceAuth(input: DeviceAuthInput): Promise<DeviceAuthResult> {
+function runCodexLogin(input: CodexLoginInput): Promise<CodexLoginResult> {
   return new Promise((resolve, reject) => {
     const target = resolveSpawnTarget({
       command: "codex",
-      args: DEVICE_AUTH_ARGS,
+      args: input.deviceAuth ? ["login", "--device-auth"] : ["login"],
       env: process.env,
     });
     if (!target) {

@@ -160,7 +160,14 @@ async function tierRefusal(cliModel: string): Promise<string | undefined> {
       signal: AbortSignal.timeout(REFUSAL_PROBE_TIMEOUT_MS),
     });
     if (res.ok) return undefined;
-    return `${res.status} ${(await res.text()).slice(0, 300).replace(/\s+/g, " ")}`;
+    const body = (await res.text()).slice(0, 300).replace(/\s+/g, " ");
+    // a bare probe has no `tools`, and the free tier refuses that shape before any
+    // cap check — so this 403 describes the probe, never the run. say so instead
+    // of quoting it: the quoted body is the exact line #1377 removed.
+    if (body.includes("FreeTierError")) {
+      return `${res.status} FreeTierError — the free tier refuses a bare probe before any cap check, so this names nothing about the run`;
+    }
+    return `${res.status} ${body}`;
   } catch {
     return undefined;
   }

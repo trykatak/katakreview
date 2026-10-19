@@ -26,7 +26,7 @@ const FALLBACK_PROBE_MODEL = fallbackResolve.slice(fallbackResolve.indexOf("/") 
  */
 export type SubscriptionPreflight =
   | { usable: true; status: number | undefined }
-  | { usable: false; status: number; reason: string };
+  | { usable: false; status: number; reason: string; resetAt: Date | undefined };
 
 /**
  * preflight a Claude subscription OAuth token (`CLAUDE_CODE_OAUTH_TOKEN`)
@@ -80,10 +80,14 @@ export async function preflightClaudeSubscription(params: {
   if (res.status !== 401 && res.status !== 403 && res.status !== 429)
     return { usable: true, status: res.status };
   const body = await res.text().catch(() => "");
+  // epoch seconds, sent on every subscription response — the moment a capped
+  // window opens again, which a 429's own message only gives in prose.
+  const reset = Number(res.headers.get("anthropic-ratelimit-unified-reset"));
   return {
     usable: false,
     status: res.status,
     reason: `${res.status}: ${extractApiErrorMessage(body)}`,
+    resetAt: res.status === 429 && reset > 0 ? new Date(reset * 1000) : undefined,
   };
 }
 

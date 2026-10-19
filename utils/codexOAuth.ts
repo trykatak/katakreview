@@ -41,7 +41,7 @@ export interface CodexAuthBody {
 }
 
 /** OAuth client id Codex CLI and OpenCode both use against `auth.openai.com`.
- * Same chain — a refresh token minted via `codex login --device-auth` can be
+ * Same chain — a refresh token minted via `codex login` can be
  * refreshed against this client_id. */
 export const CODEX_OAUTH_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
 export const CODEX_OAUTH_TOKEN_URL = "https://auth.openai.com/oauth/token";

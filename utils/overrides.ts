@@ -10,7 +10,7 @@
  * Treat the run log as compromised for any value placed in `unsafe_overrides`.
  */
 
-import * as core from "@actions/core";
+import { maskSecret } from "./secretCommands.ts";
 
 /**
  * Names refused even when present in the input. Overriding these would let a
@@ -70,7 +70,7 @@ export function parseOverrides(raw: string): Record<string, string> {
 /**
  * Mutate `params.env` in place with the supplied JSON overrides, skipping any
  * names in `DENIED_OVERRIDE_NAMES`. Each applied value is registered with
- * `core.setSecret` so the runner masks it in subsequent log output, and the
+ * `maskSecret` so the runner masks it in subsequent log output, and the
  * raw `UNSAFE_OVERRIDES` env var is deleted so spawned subprocesses don't
  * inherit the original JSON (which would defeat both the deny-list and the
  * masking by exposing the values verbatim).
@@ -89,7 +89,7 @@ export function applyOverrides(params: {
       denied.push(key);
       continue;
     }
-    if (value.length > 0) core.setSecret(value);
+    if (value.length > 0) maskSecret(value);
     params.env[key] = value;
     applied.push(key);
   }

@@ -2,7 +2,8 @@
  * Claude Code agent — secure harness around the `claude` CLI.
  *
  * mirrors the opencode harness's security model:
- * - native exec tools (Bash, Monitor, REPL, Workflow) blocked via BOTH
+ * - native exec tools (Bash, PowerShell, Monitor, REPL, Workflow) and the
+ *   claude.ai egress tools (`CLAUDE_DENIED_TOOLS`) blocked via BOTH
  *   --disallowedTools AND managed-settings.json `permissions.deny` (the agent
  *   cannot shell out / run code outside the MCP shell). the managed-settings
  *   deny is the authoritative, bypass-immune layer: `--disallowedTools` alone
@@ -53,9 +54,15 @@ import {
   buildClaudePretoolGateSettings,
   buildClaudePretoolGateSource,
   CLAUDE_PRETOOL_GATE_FILENAME,
+  CLAUDE_SETTINGS_FILENAME,
+  CLAUDE_STOP_HOOK_FILENAME,
 } from "./claudePretoolGate.ts";
 import { startGateServer } from "./gateServer.ts";
-import { GIT_NATIVE_READ_DENY_CLAUDE, GIT_NATIVE_WRITE_DENY_CLAUDE } from "./nativeFsDenies.ts";
+import {
+  CLAUDE_HOOK_ASSET_RELPATHS,
+  GIT_NATIVE_READ_DENY_CLAUDE,
+  GIT_NATIVE_WRITE_DENY_CLAUDE,
+} from "./nativeFsDenies.ts";
 import { finalizeAgentResult } from "./postRun.ts";
 import { REVIEWER_AGENT_NAME, REVIEWER_SYSTEM_PROMPT } from "./reviewer.ts";
 import { formatWithLabel, ORCHESTRATOR_LABEL, SessionLabeler } from "./sessionLabeler.ts";
@@ -91,23 +98,42 @@ async function installClaudeCli(): Promise<string> {
  *   - `Monitor` runs a shell command/script (the `command` field)
  *   - `REPL` runs arbitrary JavaScript (can `require("node:child_process")`)
  *   - `Workflow` orchestrates subagents/pipelines that can reach the above
+ *     (registered by default from 2.1.280)
+ *   - `PowerShell` is a native shell like `Bash`: on by default on Windows
+ *     runners, opt-in elsewhere via `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`
  * Each is denied at top level and inside `Agent(...)` (Task subagents), mirroring
  * the existing `Bash` / `Agent(Bash)` pair. Denying a tool that isn't registered
  * in a given run is a harmless no-op, so this list is also forward-safe.
+ * Denying `Bash` also keeps `Glob` / `Grep` registered: native builds with
+ * embedded search drop them in favor of search inside `Bash` (2.1.162+), and
+ * bring them back only when `Bash` is unavailable.
  *
- * `CLAUDE_EXEC_TOOL_DENY_RULES` is wired into TWO surfaces: `--disallowedTools`
+ * `CLAUDE_DENY_RULES` is wired into TWO surfaces: `--disallowedTools`
  * (removes the tools from the advertised list) and managed-settings.json
  * `permissions.deny` (the authoritative, bypass-immune deny — see
  * buildManagedSettings). The flag alone proved insufficient: under
  * `--dangerously-skip-permissions` the native Bash tool ran despite
  * `--disallowedTools Bash`, leaking a per-run secret marker.
  */
-const CLAUDE_EXEC_TOOLS = ["Bash", "Monitor", "REPL", "Workflow"] as const;
-const CLAUDE_EXEC_TOOL_DENY_RULES = [
+const CLAUDE_EXEC_TOOLS = ["Bash", "PowerShell", "Monitor", "REPL", "Workflow"] as const;
+/** not exec, but each reaches off the runner under a claude.ai login: `DesignSync`, `Artifact` and
+ * `ShareOnboardingGuide` upload local files, outside the `Read` denies; `SendMessage`/`ListAgents`,
+ * `PushNotification` and `RemoteTrigger` reach the account's other sessions, devices and routines. */
+const CLAUDE_DENIED_TOOLS = [
   ...CLAUDE_EXEC_TOOLS,
-  ...CLAUDE_EXEC_TOOLS.map((t) => `Agent(${t})`),
+  "DesignSync",
+  "Artifact",
+  "ShareOnboardingGuide",
+  "SendMessage",
+  "ListAgents",
+  "PushNotification",
+  "RemoteTrigger",
 ];
-const CLAUDE_DISALLOWED_TOOLS = CLAUDE_EXEC_TOOL_DENY_RULES.join(",");
+const CLAUDE_DENY_RULES = [
+  ...CLAUDE_DENIED_TOOLS,
+  ...CLAUDE_DENIED_TOOLS.map((t) => `Agent(${t})`),
+];
+const CLAUDE_DISALLOWED_TOOLS = CLAUDE_DENY_RULES.join(",");
 
 // ── config ─────────────────────────────────────────────────────────────────────
 
@@ -157,7 +183,7 @@ function writePretoolGateAssets(params: { ctx: AgentRunContext; stopHookPath: st
   const scriptPath = join(params.ctx.tmpdir, CLAUDE_PRETOOL_GATE_FILENAME);
   writeFileSync(scriptPath, buildClaudePretoolGateSource(params.ctx.subagentDeniedTools));
   chmodSync(scriptPath, 0o755);
-  const settingsPath = join(params.ctx.tmpdir, "pullfrog-claude-settings.json");
+  const settingsPath = join(params.ctx.tmpdir, CLAUDE_SETTINGS_FILENAME);
   const settings = buildClaudeSettings({
     ctx: params.ctx,
     stopHookPath: params.stopHookPath,
@@ -189,7 +215,7 @@ function buildAgentsJson(): string {
         "Read-only review subagent for lens-based code review (correctness, security, billing-subsystem, etc.). " +
         "Reads only — no writes, no state-changing shell or MCP calls, no nested subagent dispatch.",
       prompt: REVIEWER_SYSTEM_PROMPT,
-      model: "claude-sonnet-5",
+      model: "claude-sonnet-5-5",
     },
   };
   return JSON.stringify(agents);
@@ -203,16 +229,16 @@ const CLAUDE_EFFORT_ENV = "CLAUDE_CODE_EFFORT_LEVEL";
 
 /**
  * levels the pinned binary's `--effort` will accept, verbatim from
- * `claude --help` on 2.1.150 and confirmed by probing each one. anything else is
- * an arg-parse failure — exit 1, before any API call — so this is the last gate
- * before a rung reaches the CLI. rungs come from models.dev, a different source
- * from this enum, so the two are free to drift.
+ * `claude --help` on 2.1.293 and confirmed by probing each one on Opus 5.5.
+ * 2.1.150 exited 1 on anything else, before any API call; 2.1.280+ instead warns
+ * and silently runs the default effort — so this is still the last gate that
+ * stops a rung the CLI would not honor. rungs come from models.dev, a different
+ * source from this enum, so the two are free to drift.
  *
  * `ultra` deliberately absent: the binary carries it internally (the request
- * builder folds it to `max`, and the interactive picker offers it when the model
- * advertises it) but the ARG PARSER rejects it — `--effort ultra` exits 1. same
- * for `ultracode`, which needs CLI >= 2.1.203. reading the binary's strings will
- * suggest otherwise; probe the flag instead.
+ * builder folds it to `max`) but `--effort ultra` is rejected as unknown.
+ * `ultracode` (CLI >= 2.1.203) parses on 2.1.293 but no model publishes it as a
+ * rung. reading the binary's strings will suggest otherwise; probe the flag.
  *
  * REVALIDATE ON EVERY claude-code BUMP.
  */
@@ -1007,18 +1033,24 @@ function buildClaudeSettings(params: ManagedSettingsParams): Record<string, unkn
     `Glob(${path}/**)`,
     `Glob(/${path}/**)`,
   ]);
-  // single builder for both the PreToolUse gate hook and the native exec-tool
-  // deny — both fields are consumed here (and identically in the flag-settings
-  // path via writePretoolGateAssets), keeping CLAUDE_EXEC_TOOL_DENY_RULES the
-  // single source.
-  const gate = buildClaudePretoolGateSettings(
-    params.pretoolGateScriptPath,
-    CLAUDE_EXEC_TOOL_DENY_RULES
-  );
+  // write-deny the pullfrog hook assets so a prompt-injected agent cannot
+  // rewrite the gate/Stop hook to capture the env it runs with. exact absolute
+  // paths under tmpdir; dual leading-slash mirrors the secretDenyPaths form.
+  // reads stay allowed (the files are not secret; the write is the vector).
+  // canonical set: action/agents/nativeFsDenies.ts. the MCP shell is sealed
+  // separately by the read-only bind in action/mcp/shell.ts.
+  const hookDeny = CLAUDE_HOOK_ASSET_RELPATHS.flatMap((rel) => {
+    const abs = join(params.ctx.tmpdir, rel);
+    return [`Edit(${abs})`, `Edit(/${abs})`];
+  });
+  // single builder for both the PreToolUse gate hook and the native tool deny —
+  // both fields are consumed here (and identically in the flag-settings path via
+  // writePretoolGateAssets), keeping CLAUDE_DENY_RULES the single source.
+  const gate = buildClaudePretoolGateSettings(params.pretoolGateScriptPath, CLAUDE_DENY_RULES);
   const base: Record<string, unknown> = {
     permissions: {
       deny: [
-        // native exec tools — the authoritative, bypass-immune deny.
+        // CLAUDE_DENIED_TOOLS — the authoritative, bypass-immune deny.
         // `--disallowedTools` (a cliArg-source deny) leaked under
         // `--dangerously-skip-permissions`; policySettings denies survive
         // bypassPermissions mode. covers top-level + Agent(...) subagent use.
@@ -1039,6 +1071,7 @@ function buildClaudeSettings(params: ManagedSettingsParams): Record<string, unkn
         ...GIT_NATIVE_WRITE_DENY_CLAUDE,
         ...GIT_NATIVE_READ_DENY_CLAUDE,
         ...toolDeny,
+        ...hookDeny,
       ],
     },
     sandbox: {
@@ -1205,7 +1238,7 @@ export const claude = agent({
     // managed Stop hook that curls a sidecar gate server. see
     // `buildStopHookScript` for the cost rationale (PR #792 audit) and
     // `gateServer.ts` for the decision policy.
-    const stopHookPath = join(ctx.tmpdir, "pullfrog-stop-hook.sh");
+    const stopHookPath = join(ctx.tmpdir, CLAUDE_STOP_HOOK_FILENAME);
     writeFileSync(stopHookPath, buildStopHookScript(), { mode: 0o755 });
 
     const pretoolGate = writePretoolGateAssets({ ctx, stopHookPath });
@@ -1245,7 +1278,7 @@ export const claude = agent({
     }
 
     // agent process gets full env — needs LLM API keys, PATH, locale, etc.
-    // security is enforced via managed-settings.json, --disallowedTools (native exec tools), and MCP tool filtering.
+    // security is enforced via managed-settings.json, --disallowedTools (CLAUDE_DENIED_TOOLS), and MCP tool filtering.
     //
     // bedrock route: claude-code reads `CLAUDE_CODE_USE_BEDROCK=1` to switch
     // its provider implementation from the direct Anthropic API to Bedrock.
@@ -1275,6 +1308,10 @@ export const claude = agent({
     // Claude Code caps this at its detected model window: 200K stays 200K, while 1M uses 500K.
     // Keep operator overrides; revalidate this when the pinned CLI or model windows change.
     env.CLAUDE_CODE_AUTO_COMPACT_WINDOW ||= "500000";
+    // newer models get no task tool by default; these two restore `TodoWrite`, which feeds the
+    // progress comment's task list (TaskCreate/TaskUpdate would need a second parser).
+    env.CLAUDE_CODE_ENABLE_TODO_TOOLS = "1";
+    env.CLAUDE_CODE_ENABLE_TASKS = "0";
     if (isBedrockRoute) {
       env.CLAUDE_CODE_USE_BEDROCK = "1";
     }

@@ -4,9 +4,9 @@ import { dirname, join } from "node:path";
 import * as core from "@actions/core";
 import { throttling } from "@octokit/plugin-throttling";
 import { Octokit } from "@octokit/rest";
-import * as yes from "../yes/index.ts";
+import * as yes from "yes";
 import { apiFetch } from "./apiFetch.ts";
-import { isGitHubActions } from "./globals.ts";
+import { maskSecret } from "./secretCommands.ts";
 
 /** OIDC audience for Pullfrog API token exchanges */
 const OIDC_AUDIENCE = "pullfrog-api";
@@ -171,9 +171,7 @@ export async function fetchIdTokenFromStash(creds: OidcCredentials): Promise<str
   if (!body.value) {
     throw new Error("ID token response has no value field");
   }
-  if (isGitHubActions) {
-    core.setSecret(body.value);
-  }
+  maskSecret(body.value);
   return body.value;
 }
 
@@ -203,16 +201,17 @@ function translateIdTokenError(error: unknown): unknown {
  * own retry still re-mints. Mid-run refreshes take the stashed-credentials path
  * (`opts.oidc`) and deliberately bypass this.
  */
-export const mintIdToken = yes.op(
-  async () => {
+export const mintIdToken = yes.query({
+  run: async () => {
     try {
       return await core.getIDToken(OIDC_AUDIENCE);
     } catch (error) {
       throw translateIdTokenError(error);
     }
   },
-  { ttl: 60_000, name: "OIDC ID token" }
-);
+  ttl: 60_000,
+  name: "OIDC ID token",
+});
 
 async function acquireTokenViaOIDC(opts?: AcquireTokenOptions): Promise<string> {
   const oidcToken = opts?.oidc ? await fetchIdTokenFromStash(opts.oidc) : await mintIdToken();
@@ -495,10 +494,11 @@ export async function acquireNewToken(opts?: AcquireTokenOptions): Promise<strin
     return await acquireTokenViaGitHubApp(opts);
   }
   if (opts?.oidc || isOIDCAvailable()) {
-    return await yes.op(() => acquireTokenViaOIDC(opts), {
+    return await yes.mutation({
+      run: () => acquireTokenViaOIDC(opts),
       name: "token exchange",
-      retries: [1000, 2000],
-      bail: (error) => !isTransientTokenError(error),
+      retry: (error, attempt) =>
+        isTransientTokenError(error) ? yes.delay([1000, 2000], attempt) : -1,
     })();
   }
   // running inside GitHub Actions but the OIDC env vars are absent — the

@@ -90,39 +90,27 @@ export function commercialPaywallBody(params: {
   reason: CommercialRefusal;
   ownerLogin: string;
   url: string;
+  freshReply?: boolean | undefined;
 }): string {
-  // "$30/month per organization" and "unlimited runs, members, and repos" are
-  // the trial emails' wording; the price is hardcoded there too.
-  const pitch =
-    "Pro is required on private organization repos like this one: a flat $30/month per organization for unlimited runs, members, and repos.";
+  let action: string;
   switch (params.reason) {
     case "commercial":
-      return [
-        `**${params.ownerLogin}'s Pullfrog trial has expired.**`,
-        "",
-        pitch,
-        "",
-        `[Upgrade now →](${params.url})`,
-      ].join("\n");
+      action = "upgrade";
+      break;
     case "subscription_ended":
-      return [
-        `**${params.ownerLogin}'s Pullfrog Pro subscription has ended.**`,
-        "",
-        pitch,
-        "",
-        `[Resubscribe →](${params.url})`,
-      ].join("\n");
+      action = "resubscribe";
+      break;
     case "subscription_unpaid":
-      return [
-        `**Pullfrog paused runs on ${params.ownerLogin}: the Pro renewal failed.**`,
-        "",
-        "Update the card on file to resume runs.",
-        "",
-        `[Update billing →](${params.url})`,
-      ].join("\n");
+      action = "update billing";
+      break;
     default:
       return params.reason satisfies never;
   }
+  return [
+    `**Pullfrog is ${params.freshReply ? "still paused" : "paused"} for ${params.ownerLogin}.**`,
+    "",
+    `An org owner can [${action}](${params.url}) to resume private-repo runs.`,
+  ].join("\n");
 }
 
 /**
@@ -210,11 +198,11 @@ export function formatBillingErrorSummary(error: BillingError, owner: string): s
 
   if (error.code === "router_monthly_limit") {
     return [
-      "**Pullfrog Router hit its monthly spend limit.**",
+      "**Pullfrog Router is out of credit, and the monthly spend limit blocks the next auto-reload.**",
       "",
-      "Auto-reloads are paused for the rest of this UTC month. Ask your admin to raise the cap, or wait for it to reset at 00:00 UTC on the 1st.",
+      "Top up by hand, ask your admin to raise the cap, or wait for it to reset at 00:00 UTC on the 1st.",
       "",
-      `[Adjust limit →](${billingConsoleUrl(owner)})`,
+      `[Top up balance →](${billingConsoleUrl(owner)}) · [Adjust limit →](${billingConsoleUrl(owner)})`,
     ].join("\n");
   }
 

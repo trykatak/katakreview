@@ -39,12 +39,13 @@ export const JsonPayload = type({
   "model?": "string | undefined",
   "modelExplicit?": "boolean | undefined",
   // optional so a payload from a pre-router server build still parses against a
-  // newer action across a rolling deploy.
+  // newer action across a rolling deploy. a new `source` value is released in the
+  // action before the server emits it: the published action rejects the payload.
   "routing?": type({
     tier: "'minimal' | 'light' | 'standard' | 'deep'",
     stakes: "number",
     workload: "number",
-    source: "'scorer' | 'heuristic' | 'fixed'",
+    source: "'jev' | 'scorer' | 'heuristic' | 'fixed'",
     rationale: "string",
   }).or("undefined"),
   "effort?": "number | string | undefined",

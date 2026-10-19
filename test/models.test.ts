@@ -27,6 +27,14 @@ describe("GPT Astra routing and effort", () => {
   });
 });
 
+describe("OpenCode Go GLM Flash effort", () => {
+  it("omits direct effort while retaining the OpenRouter ladder", () => {
+    const slug = "opencode-go/glm-flash";
+    expect(resolveModelRung({ slug, useOpenRouter: false, position: 0.5 })).toBeUndefined();
+    expect(resolveModelRung({ slug, useOpenRouter: true, position: 0.5 })).toBe("high");
+  });
+});
+
 // ── pure alias-registry invariants ──────────────────────────────────────────────
 //
 // these tests validate our alias data structure without hitting external APIs.
@@ -57,6 +65,7 @@ const BYOK_ONLY_MODELS = new Set<string>([
   "vercel/glm",
   "vercel/kimi-k3",
   "vercel/muse-spark",
+  "vercel/mistral-large",
   // same reason as the vercel/* entries, one step further: these aliases exist
   // to spend a Kimi MEMBERSHIP, and OpenRouter cannot resell one — its
   // `moonshotai/*` ids are the pay-as-you-go route the user picked these to

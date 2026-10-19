@@ -19,10 +19,9 @@
  *   - 404 → `TransientError` (stale repo↔account link — re-homes on next webhook)
  */
 
-import * as core from "@actions/core";
+import * as yes from "yes";
 import { DEFAULT_PROXY_MODEL, isCardGatedModel, resolveOpenRouterModel } from "../models.ts";
 import type { ToolState } from "../toolState.ts";
-import * as yes from "../yes/index.ts";
 import { apiFetch } from "./apiFetch.ts";
 import { isLocalApiUrl } from "./apiUrl.ts";
 import {
@@ -35,6 +34,7 @@ import { log, writeSummary } from "./cli.ts";
 import { reportErrorToComment } from "./errorReport.ts";
 import { fetchIdTokenFromStash, isTransientTokenError, type OidcCredentials } from "./github.ts";
 import type { ResolvedPayload } from "./payload.ts";
+import { maskSecret } from "./secretCommands.ts";
 
 /** which program pays for the minted key. the server re-derives entitlement for
  * every value of this — it is a request, never a claim. */
@@ -57,8 +57,8 @@ async function mintProxyKey(ctx: {
     // the provider key the grant exists to replace (#1192). retry, then render
     // the "temporarily unavailable" copy instead of the "billing error" label
     // BillingError uses.
-    const response = await yes.op(
-      async () => {
+    const response = await yes.mutation({
+      run: async () => {
         const r = await apiFetch({ path: "/api/proxy-token", method: "POST", headers });
         if (r.status >= 500) {
           const body = (await r.json().catch(() => null)) as { error?: string } | null;
@@ -68,12 +68,10 @@ async function mintProxyKey(ctx: {
         }
         return r;
       },
-      {
-        name: "proxy key mint",
-        retries: [1000, 2000],
-        bail: (error) => !(error instanceof TransientError),
-      }
-    )();
+      name: "proxy key mint",
+      retry: (error, attempt) =>
+        error instanceof TransientError ? yes.delay([1000, 2000], attempt) : -1,
+    })();
 
     if (response.status === 402) {
       const body = (await response.json().catch(() => null)) as {
@@ -142,10 +140,11 @@ async function buildProxyTokenHeaders(ctx: {
     // retry transients — core.getIDToken (the previous mint path) retried
     // 5xx internally, and a soft-skip here degrades the run to BYOK
     const creds = ctx.oidcCredentials;
-    const oidcToken = await yes.op(() => fetchIdTokenFromStash(creds), {
+    const oidcToken = await yes.query({
+      run: () => fetchIdTokenFromStash(creds),
       name: "ID token mint",
-      retries: [1000, 2000],
-      bail: (error) => !isTransientTokenError(error),
+      retry: (error, attempt) =>
+        isTransientTokenError(error) ? yes.delay([1000, 2000], attempt) : -1,
     })();
     return {
       Authorization: `Bearer ${oidcToken}`,
@@ -210,7 +209,7 @@ async function resolveProxyModel(ctx: {
   if (!key) return;
 
   process.env.OPENROUTER_API_KEY = key;
-  core.setSecret(key);
+  maskSecret(key);
   ctx.payload.proxyModel = ctx.proxyModel;
   // reflect the effective (proxy) model now — an error comment built between
   // here and main.ts's post-resolution refinement would otherwise show the
@@ -381,7 +380,7 @@ export async function resolveTrialFallback(ctx: {
   if (!key) return false;
 
   process.env.OPENROUTER_API_KEY = key;
-  core.setSecret(key);
+  maskSecret(key);
   ctx.payload.proxyModel = DEFAULT_PROXY_MODEL;
   ctx.toolState.model = DEFAULT_PROXY_MODEL;
   // `from` is what the repo was configured to use, so the disclosure can name

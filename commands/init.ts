@@ -99,8 +99,9 @@ function openBrowser(url: string) {
   try {
     const platform = process.platform;
     if (platform === "darwin") execFileSync("open", [url], { stdio: "ignore" });
+    // rundll32, not `cmd /c start`, which splits an unquoted URL at every `&`
     else if (platform === "win32")
-      execFileSync("cmd", ["/c", "start", "", url], { stdio: "ignore" });
+      execFileSync("rundll32.exe", ["url.dll,FileProtocolHandler", url], { stdio: "ignore" });
     else execFileSync("xdg-open", [url], { stdio: "ignore" });
   } catch {
     // headless/SSH — user will open the URL manually

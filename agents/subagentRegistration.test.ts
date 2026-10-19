@@ -17,7 +17,9 @@ const opencodeV2Source = readFileSync(join(__dirname, "opencode.ts"), "utf-8");
 describe("subagent registration source asserts", () => {
   describe("claude.ts buildAgentsJson", () => {
     it("registers reviewfrog with sonnet model", () => {
-      expect(claudeSource).toMatch(/\[REVIEWER_AGENT_NAME\]:\s*\{[^}]*model:\s*"claude-sonnet-5"/s);
+      expect(claudeSource).toMatch(
+        /\[REVIEWER_AGENT_NAME\]:\s*\{[^}]*model:\s*"claude-sonnet-5-5"/s
+      );
     });
     it("imports the reviewer name constant", () => {
       expect(claudeSource).toMatch(/REVIEWER_AGENT_NAME/);

@@ -3,6 +3,7 @@ import * as core from "@actions/core";
 import arg from "arg";
 import { main } from "../main.ts";
 import { runOAuthWriteback } from "../utils/oauthWriteback.ts";
+import { maskSecret, saveSecretState, setSecretOutput } from "../utils/secretCommands.ts";
 import { acquireInstallationToken, revokeInstallationToken } from "../utils/token.ts";
 
 // GitHub Actions runs the action entry point with the node24 binary specified
@@ -41,9 +42,9 @@ async function tokenMain(): Promise<void> {
 
   const token = await acquireInstallationToken({ repos: additionalRepos });
 
-  core.setSecret(token);
-  core.saveState(STATE_TOKEN, token);
-  core.setOutput("token", token);
+  maskSecret(token);
+  saveSecretState(STATE_TOKEN, token);
+  setSecretOutput("token", token);
 
   const scope = additionalRepos.length
     ? `current repo + ${additionalRepos.join(", ")}`

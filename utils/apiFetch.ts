@@ -1,5 +1,6 @@
 import { getApiUrl } from "./apiUrl.ts";
 import { log } from "./cli.ts";
+import { vercelBypassSecretFor } from "./vercelBypass.ts";
 
 type ApiFetchOptions = {
   path: string;
@@ -23,7 +24,7 @@ export async function apiFetch(options: ApiFetchOptions): Promise<Response> {
   const apiUrl = getApiUrl();
   const url = new URL(options.path, apiUrl);
 
-  const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  const bypassSecret = vercelBypassSecretFor(url);
   if (bypassSecret) {
     url.searchParams.set("x-vercel-protection-bypass", bypassSecret);
   }

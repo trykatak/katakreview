@@ -197,6 +197,48 @@ function requireExecutable(params: {
   return resolved;
 }
 
+// npm lists a new version before its CDN serves it, and the CDN then caches that
+// 404 for five minutes; every run in that window died on 0.1.93. the 330s total
+// outlasts a 404 this run's own first attempt cached. see wiki/action-bootstrap.md.
+const PREFETCH_RETRY_SECONDS = [30, 60, 90, 150];
+
+function isNotYetServed(error: unknown): boolean {
+  if (!(error instanceof Error) || !("stderr" in error)) return false;
+  const stderr = String(error.stderr);
+  return (stderr.includes("E404") && stderr.includes(".tgz")) || stderr.includes("ETARGET");
+}
+
+/**
+ * Download the package into npm's cache, retrying only a release npm lists but
+ * does not serve yet, so the real run installs from the cache. Any other failure
+ * is left for the real run to reproduce with its output visible.
+ */
+function prefetchPackage(params: {
+  context: RuntimeContext;
+  npxPath: string;
+  packageSpec: string;
+}): void {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      execFileSync(
+        params.npxPath,
+        ["--yes", "--package", params.packageSpec, "--", "node", "-e", "0"],
+        {
+          cwd: mkdtempSync(join(tmpdir(), "pullfrog-bootstrap-")),
+          stdio: ["ignore", "ignore", "pipe"],
+          env: params.context.env,
+        }
+      );
+      return;
+    } catch (error) {
+      const delay = PREFETCH_RETRY_SECONDS[attempt];
+      if (delay === undefined || !isNotYetServed(error)) return;
+      console.warn(`» npm does not serve ${params.packageSpec} yet; retrying in ${delay}s`);
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay * 1000);
+    }
+  }
+}
+
 function runPackageCli(context: RuntimeContext, packageSpec: string, cliArgs: string[]): void {
   // `verify` here and not in `requireExecutable`: this is the one resolution
   // whose failure is unattributable, because a broken launcher dies before any
@@ -204,6 +246,7 @@ function runPackageCli(context: RuntimeContext, packageSpec: string, cliArgs: st
   const npxPath = resolveExecutable({ command: "npx", env: context.env, verify: true });
   if (npxPath) {
     console.log(`» running ${packageSpec} via ${npxPath}`);
+    prefetchPackage({ context, npxPath, packageSpec });
     runCommand({ context, command: npxPath, args: ["--yes", packageSpec, ...cliArgs] });
     return;
   }

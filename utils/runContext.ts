@@ -1,8 +1,16 @@
+import { randomUUID } from "node:crypto";
 import type { PushPermission, ShellPermission } from "../external.ts";
 import type { RouterTier } from "../models.ts";
 import { apiFetch } from "./apiFetch.ts";
 import type { CommercialRefusal } from "./billingErrors.ts";
 import type { RepoContext } from "./github.ts";
+import type { CredentialAccess } from "./subscriptionCredentials.ts";
+
+/**
+ * One per process, which is one start of the action within its GitHub run. Sent to run-context
+ * first, so a custom run's start is recorded before it reports, and then on each workflow-run PATCH.
+ */
+export const START_KEY = randomUUID();
 
 export interface Mode {
   id: string;
@@ -40,6 +48,8 @@ export interface RepoSettings {
   push: PushPermission;
   shell: ShellPermission;
   prApproveEnabled: boolean;
+  // "Include draft PRs": the post-run safety net re-reviews a moved draft only when set.
+  reviewDrafts: boolean;
   // already globally-gated server-side (run-context ANDs the per-repo toggle with
   // the `isAutonomousMaintenanceEnabled()` kill switch), so the runtime treats it
   // as the final "may auto-merge" verdict. see autoMergeAfterApprove.
@@ -79,6 +89,7 @@ export interface RepoSettings {
 export type AccountPlan = "none" | "payg";
 
 export interface RunContext {
+  credentialAccess?: CredentialAccess | undefined;
   settings: RepoSettings;
   apiToken: string;
   oss: boolean;
@@ -128,6 +139,7 @@ const defaultSettings: RepoSettings = {
   push: "restricted",
   shell: "restricted",
   prApproveEnabled: false,
+  reviewDrafts: false,
   autoMergeEnabled: false,
   codexAgent: false,
   signedCommits: false,
@@ -175,6 +187,9 @@ export async function fetchRunContext(params: {
   /** `payload.type` — lets the server apply this repo's per-trigger model
    * override, which it cannot derive from owner/repo alone. */
   runType?: string | undefined;
+  /** a plain-text prompt, which no Pullfrog dispatch sends — so the server
+   * can record this run without waiting for a reservation to claim it. */
+  plainPrompt: boolean;
   /** `payload.routing.tier` — the model router's tier, which run-context
    * applies to the Router proxy mint the same way it applies `runType`. */
   routedTier?: RouterTier | undefined;
@@ -186,13 +201,15 @@ export async function fetchRunContext(params: {
   try {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${params.token}`,
+      "X-Pullfrog-Credential-Pools": "1",
     };
     if (params.oidcToken) {
       headers["X-GitHub-OIDC-Token"] = params.oidcToken;
     }
 
-    const query = new URLSearchParams();
+    const query = new URLSearchParams({ start: START_KEY });
     if (params.runType) query.set("type", params.runType);
+    if (params.plainPrompt) query.set("prompt", "plain");
     if (params.routedTier) query.set("tier", params.routedTier);
     const search = query.toString();
     const response = await apiFetch({
@@ -229,6 +246,7 @@ export async function fetchRunContext(params: {
       plan?: AccountPlan;
       proxyModel?: string;
       dbSecrets?: Record<string, string>;
+      credentialAccess?: CredentialAccess;
       secretsUnavailable?: boolean;
       routerUnfunded?: boolean;
       trialFallback?: boolean;
@@ -257,6 +275,7 @@ export async function fetchRunContext(params: {
       plan: data.plan ?? "none",
       proxyModel: data.proxyModel,
       dbSecrets: data.dbSecrets,
+      credentialAccess: data.credentialAccess,
       secretsUnavailable: data.secretsUnavailable,
       routerUnfunded: data.routerUnfunded,
       trialFallback: data.trialFallback,

@@ -141,32 +141,33 @@ export const providers = {
       // API is the source of truth (#959).
       "claude-fable": {
         displayName: "Claude Fable",
-        resolve: "anthropic/claude-fable-5",
+        resolve: "anthropic/claude-fable-5-1",
         effort: ["low", "medium", "high", "xhigh", "max"],
         // rolling alias: models.dev's OpenRouter mirror lags brand-new pinned
-        // versions (claude-fable-5 isn't indexed yet), so track ~…-latest to
+        // versions (claude-fable-5 was missing there when this was added), so track ~…-latest to
         // stay catalog-valid and auto-follow version bumps.
         openRouterResolve: "openrouter/~anthropic/claude-fable-latest",
         subagentModel: "claude-sonnet",
       },
       "claude-opus": {
         displayName: "Claude Opus",
-        resolve: "anthropic/claude-opus-5",
+        resolve: "anthropic/claude-opus-5-5",
         effort: ["low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/anthropic/claude-opus-5",
+        openRouterResolve: "openrouter/anthropic/claude-opus-5.5",
         preferred: true,
         subagentModel: "claude-sonnet",
       },
       "claude-sonnet": {
         displayName: "Claude Sonnet",
-        resolve: "anthropic/claude-sonnet-5",
+        resolve: "anthropic/claude-sonnet-5-5",
         effort: ["low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/anthropic/claude-sonnet-5",
+        openRouterResolve: "openrouter/anthropic/claude-sonnet-5.5",
       },
       "claude-haiku": {
         displayName: "Claude Haiku",
-        resolve: "anthropic/claude-haiku-4-5",
-        openRouterResolve: "openrouter/anthropic/claude-haiku-4.5",
+        resolve: "anthropic/claude-haiku-5-5",
+        effort: ["low", "medium", "high", "xhigh", "max"],
+        openRouterResolve: "openrouter/anthropic/claude-haiku-5.5",
       },
     },
   }),
@@ -188,9 +189,9 @@ export const providers = {
       },
       "gpt-sol": {
         displayName: "GPT Sol",
-        resolve: "openai/gpt-5.6-sol",
-        effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-sol",
+        resolve: "openai/gpt-6.1-sol",
+        effort: ["low", "medium", "high", "xhigh", "max"],
+        openRouterResolve: "openrouter/openai/gpt-6.1-sol",
         preferred: true,
         subagentModel: "gpt-terra",
       },
@@ -200,9 +201,9 @@ export const providers = {
       "gpt-sol-pro": {
         displayName: "GPT Sol Pro",
         description: "Maximum reasoning effort",
-        resolve: "openai/gpt-5.6-sol",
-        effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-sol-pro",
+        resolve: "openai/gpt-6.1-sol",
+        effort: ["low", "medium", "high", "xhigh", "max"],
+        openRouterResolve: "openrouter/openai/gpt-6.1-sol-pro",
         subagentModel: "gpt-sol",
       },
       // gpt-5.6's balanced mid-tier. selectable on its own and doubles as Sol's
@@ -215,9 +216,9 @@ export const providers = {
       },
       "gpt-luna": {
         displayName: "GPT Luna",
-        resolve: "openai/gpt-5.6-luna",
+        resolve: "openai/gpt-6-luna",
         effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-luna",
+        openRouterResolve: "openrouter/openai/gpt-6-luna",
       },
       // legacy aliases — openai unified the codex line into the main GPT family
       // and is shutting down every "-codex" snapshot on 2026-07-23. transparently
@@ -566,41 +567,33 @@ export const providers = {
       },
       "claude-opus": {
         displayName: "Claude Opus",
-        resolve: "opencode/claude-opus-5",
+        resolve: "opencode/claude-opus-5-5",
         effort: ["low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/anthropic/claude-opus-5",
+        openRouterResolve: "openrouter/anthropic/claude-opus-5.5",
         subagentModel: "claude-sonnet",
-        // TEMPORARY — clear this ONLY when opus completes a run through opencode,
-        // never when the endpoint merely answers. Zen LISTS claude-opus-5 in
-        // /zen/v1/models, so the catalog test passes; on 2026-08-25 the endpoint
-        // itself answered 503 `Upstream request failed: Endpoint is unavailable.`
-        // (measured 5/5; claude-sonnet-5, claude-opus-4-8, claude-haiku-4-5 and
-        // claude-fable-5 all 200 on the same key). opencode retries above the AI
-        // SDK emitting no part.updated, so a run just produces nothing until it is
-        // killed — metaideas/init logged six zero-output failures from 2026-08-23.
-        // The 503 has since cleared and the model is STILL unusable: re-measured
-        // 2026-08-26, direct POST /zen/v1/messages is 10/10 200 at 1.3-4.1s while
-        // `opencode run --model opencode/claude-opus-5` on the same trivial prompt
-        // emitted nothing for 240s in CI. A raw-endpoint 200 is not runtime
-        // availability. see wiki/opencode-silent-stall.md
-        fallback: "opencode/claude-sonnet",
+        // fell back to Sonnet from 2026-08-25 to 2026-09-25: Zen listed
+        // claude-opus-5 while `opencode run` on it emitted nothing for 240s. A
+        // raw-endpoint 200 is not runtime availability — the fallback was cleared
+        // only once `opencode run` completed on both claude-opus-5 and 5-5. see
+        // wiki/opencode-silent-stall.md
       },
       "claude-sonnet": {
         displayName: "Claude Sonnet",
-        resolve: "opencode/claude-sonnet-5",
+        resolve: "opencode/claude-sonnet-5-5",
         effort: ["low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/anthropic/claude-sonnet-5",
+        openRouterResolve: "openrouter/anthropic/claude-sonnet-5.5",
       },
       "claude-haiku": {
         displayName: "Claude Haiku",
-        resolve: "opencode/claude-haiku-4-5",
-        openRouterResolve: "openrouter/anthropic/claude-haiku-4.5",
+        resolve: "opencode/claude-haiku-5-5",
+        effort: ["low", "medium", "high", "xhigh", "max"],
+        openRouterResolve: "openrouter/anthropic/claude-haiku-5.5",
       },
       "gpt-sol": {
         displayName: "GPT Sol",
-        resolve: "opencode/gpt-5.6-sol",
-        effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-sol",
+        resolve: "opencode/gpt-6.1-sol",
+        effort: ["low", "medium", "high", "xhigh", "max"],
+        openRouterResolve: "openrouter/openai/gpt-6.1-sol",
         subagentModel: "gpt-terra",
       },
       "gpt-astra": {
@@ -614,9 +607,9 @@ export const providers = {
       "gpt-sol-pro": {
         displayName: "GPT Sol Pro",
         description: "Maximum reasoning effort",
-        resolve: "opencode/gpt-5.6-sol",
-        effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-sol-pro",
+        resolve: "opencode/gpt-6.1-sol",
+        effort: ["low", "medium", "high", "xhigh", "max"],
+        openRouterResolve: "openrouter/openai/gpt-6.1-sol-pro",
         subagentModel: "gpt-sol",
       },
       // gpt-5.6 balanced mid-tier — selectable + Sol's subagent. see openai above.
@@ -628,9 +621,9 @@ export const providers = {
       },
       "gpt-luna": {
         displayName: "GPT Luna",
-        resolve: "opencode/gpt-5.6-luna",
+        resolve: "opencode/gpt-6-luna",
         effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-luna",
+        openRouterResolve: "openrouter/openai/gpt-6-luna",
       },
       // legacy aliases — see openai provider above for context.
       "gpt-codex": {
@@ -729,9 +722,34 @@ export const providers = {
       },
       grok: {
         displayName: "Grok",
-        resolve: "opencode/grok-4.6",
+        resolve: "opencode/grok-4.7",
         effort: ["low", "medium", "high", "xhigh"],
-        openRouterResolve: "openrouter/x-ai/grok-4.6",
+        openRouterResolve: "openrouter/x-ai/grok-4.7",
+      },
+      // Zen began listing Qwen's Max and Flash tiers in late 2026-09 (Max on
+      // 09-25); until then `opencode-go` was the only Qwen route, so a Zen
+      // subscriber without Go had none. Plus is still Go-only. Zen's Max entry
+      // publishes a reasoning toggle but no effort rungs.
+      "qwen-max": {
+        displayName: "Qwen Max",
+        resolve: "opencode/qwen3.8-max",
+        openRouterEffort: ["minimal", "low", "medium", "high", "xhigh"],
+        openRouterResolve: "openrouter/qwen/qwen3.8-max-0902",
+      },
+      "qwen-flash": {
+        displayName: "Qwen Flash",
+        resolve: "opencode/qwen3.8-flash",
+        effort: ["low", "medium", "xhigh"],
+        openRouterEffort: [],
+        openRouterResolve: "openrouter/qwen/qwen3.8-flash",
+      },
+      // Zen lists Mistral Large 4 at half its list price for launch, level with
+      // the routers.
+      "mistral-large": {
+        displayName: "Mistral Large",
+        resolve: "opencode/mistral-large-4",
+        effort: ["none", "high"],
+        openRouterResolve: "openrouter/mistralai/mistral-large-4-0",
       },
       "gpt-5-nano": {
         displayName: "GPT Nano",
@@ -780,6 +798,72 @@ export const providers = {
         // model, as `minimax-m2.5-free` does.
         fallback: "opencode/big-pickle",
       },
+      // Zen's FREE stealth preview (listed 2026-09-23), the third after
+      // big-pickle and union-alpha. Zen's docs: zero retention, no training.
+      // unlike the first two it publishes an effort ladder, so the gate
+      // mirrors one here.
+      "space-bunny": {
+        displayName: "Space Bunny",
+        description: "Stealth preview, free for a limited time",
+        resolve: "opencode/space-bunny-free",
+        effort: ["low", "medium", "high", "xhigh", "max"],
+        // free to run, still gated on the provider's own OPENCODE_API_KEY —
+        // see the big-pickle note above (#1077).
+        isFree: true,
+      },
+      // Zen's FREE Meituan preview (listed 2026-09-25). Zen's docs: zero
+      // retention, no training. Go lists the same free id, but one key reaches
+      // both, so the promo gets one row, here with the other free ones.
+      "longcat-preview": {
+        displayName: "LongCat Preview",
+        description: "Meituan preview, free for a limited time",
+        resolve: "opencode/longcat-2.5-preview-free",
+        // free to run, still gated on the provider's own OPENCODE_API_KEY —
+        // see the big-pickle note above (#1077).
+        isFree: true,
+      },
+      // Zen's FREE stealth preview (listed 2026-10-01), the fifth promo. Zen's
+      // docs: data may be used to improve the model during the free period.
+      "fledge-alpha": {
+        displayName: "Fledge Alpha",
+        description: "Stealth preview; data may be used to improve it",
+        resolve: "opencode/fledge-alpha-free",
+        effort: ["low", "high", "max"],
+        // free to run, still gated on the provider's own OPENCODE_API_KEY —
+        // see the big-pickle note above (#1077).
+        isFree: true,
+        // Zen dropped the id from `/v1/models` and its docs on 2026-10-08 and
+        // answers a 500 for it; stored picks land on the other free stealth
+        // model, as `union-alpha` does.
+        fallback: "opencode/big-pickle",
+      },
+      // Zen's FREE preview (listed 2026-10-06), the sixth promo, on Fledge
+      // Alpha's terms.
+      exo: {
+        displayName: "Exo",
+        description: "Preview; data may be used to improve it",
+        resolve: "opencode/exo-free",
+        // Zen publishes a single rung.
+        effort: ["high"],
+        // free to run, still gated on the provider's own OPENCODE_API_KEY —
+        // see the big-pickle note above (#1077).
+        isFree: true,
+        // Zen answers "Model exo-free has been deprecated." on both lanes since
+        // 2026-10-09; stored picks land on Big Pickle, as `fledge-alpha` does.
+        fallback: "opencode/big-pickle",
+      },
+      // Zen's FREE StepFun preview (listed 2026-10-08), the seventh promo. Zen's
+      // docs: zero retention, no training. Go lists the same free id; one key
+      // reaches both.
+      "step-5-preview": {
+        displayName: "Step 5 Preview",
+        description: "StepFun preview, free for a limited time",
+        resolve: "opencode/step-5-preview-free",
+        effort: ["low", "medium", "high"],
+        // free to run, still gated on the provider's own OPENCODE_API_KEY —
+        // see the big-pickle note above (#1077).
+        isFree: true,
+      },
       // Zen's live free MiMo, and the second free row in a menu that big-pickle
       // was alone in since `mimo-v2-pro-free` lost its model.
       mimo: {
@@ -816,11 +900,12 @@ export const providers = {
   // OpenCode Go is a separate $10/mo subscription from Zen, served on its own
   // base URL (`https://opencode.ai/zen/go/v1`) but authenticated with the SAME
   // `OPENCODE_API_KEY`. it carries the open-weight coding models plus a couple
-  // of frontier ones, six of which are served ONLY here — Zen's `/v1/models`
-  // does not list qwen3.7/3.8-*, mimo-v2.6-pro, longcat-2.0 or hy3. (it listed
+  // of frontier ones, four of which are served ONLY here — Zen's `/v1/models`
+  // does not list qwen3.7-plus, mimo-v2.6-pro, longcat-2.0 or hy3. (it listed
   // no glm-5.3* either until 2026-09, which is why `opencode/glm` trailed on
-  // 5.2.) so for a Go subscriber this provider is not a duplicate route to Zen,
-  // it is the only route to a large part of what they pay for.
+  // 5.2, and no qwen3.8-* until late 2026-09.) so for a Go subscriber this
+  // provider is not a duplicate route to Zen, it is the only route to a large
+  // part of what they pay for.
   // like `opencode` and `openrouter` this is a ROUTER, not a vendor: slugs and
   // display names mirror the upstream brand tier, and the picker groups them
   // under the upstream vendor.
@@ -841,7 +926,11 @@ export const providers = {
       "glm-flash": {
         displayName: "GLM Flash",
         resolve: "opencode-go/glm-5.3-flash",
-        effort: ["low", "high", "max"],
+        // the Go endpoint intermittently rejects reasoning_effort ("native reasoning
+        // control reasoning_effort is not allowed") mid-run, despite models.dev
+        // advertising a ladder — so this route sends none.
+        effort: [],
+        openRouterEffort: ["low", "high", "max"],
         openRouterResolve: "openrouter/z-ai/glm-5.3-flash",
       },
       // legacy alias — the slug pinned a version instead of a brand tier and
@@ -880,7 +969,8 @@ export const providers = {
       // picker row that fails for almost everyone is worse than none. DeepSeek
       // stays reachable ungated via `deepseek/*`, `opencode/*` and
       // `openrouter/*`; both remain runnable by full specifier once opted in.
-      // Alibaba — new vendor family for the catalog; Zen serves neither tier.
+      // Alibaba — Zen serves Max and Flash too (see `opencode/qwen-max`); Plus
+      // is Go-only.
       "qwen-max": {
         displayName: "Qwen Max",
         resolve: "opencode-go/qwen3.8-max",
@@ -956,9 +1046,9 @@ export const providers = {
       },
       "gpt-luna": {
         displayName: "GPT Luna",
-        resolve: "opencode-go/gpt-5.6-luna",
+        resolve: "opencode-go/gpt-6-luna",
         effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-luna",
+        openRouterResolve: "openrouter/openai/gpt-6-luna",
       },
     },
   }),
@@ -1058,17 +1148,20 @@ export const providers = {
       "claude-haiku": {
         displayName: "Claude Haiku",
         resolve: "openrouter/~anthropic/claude-haiku-latest",
+        // the rolling alias moved to Haiku 5.5 on 2026-10-07, which publishes
+        // the ladder Haiku 4.5 did not.
+        effort: ["low", "medium", "high", "xhigh", "max"],
         openRouterResolve: "openrouter/~anthropic/claude-haiku-latest",
       },
-      // pinned to the explicit gpt-5.6 tiers (not the ~openai/gpt-latest rolling
-      // alias): after the Sol/Terra/Luna rename, ~gpt-mini-latest no longer maps
+      // pinned to the explicit Sol/Terra/Luna tiers (not the ~openai/gpt-latest
+      // rolling alias): after that rename, ~gpt-mini-latest no longer maps
       // to Luna, so rolling aliases would silently diverge `gpt`/`gpt-mini` from
       // the chosen tiers across funding paths.
       "gpt-sol": {
         displayName: "GPT Sol",
-        resolve: "openrouter/openai/gpt-5.6-sol",
-        effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-sol",
+        resolve: "openrouter/openai/gpt-6.1-sol",
+        effort: ["low", "medium", "high", "xhigh", "max"],
+        openRouterResolve: "openrouter/openai/gpt-6.1-sol",
         subagentModel: "gpt-terra",
       },
       "gpt-astra": {
@@ -1082,9 +1175,9 @@ export const providers = {
       "gpt-sol-pro": {
         displayName: "GPT Sol Pro",
         description: "Maximum reasoning effort",
-        resolve: "openrouter/openai/gpt-5.6-sol-pro",
-        effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-sol-pro",
+        resolve: "openrouter/openai/gpt-6.1-sol-pro",
+        effort: ["low", "medium", "high", "xhigh", "max"],
+        openRouterResolve: "openrouter/openai/gpt-6.1-sol-pro",
         subagentModel: "gpt-sol",
       },
       // gpt-5.6 balanced mid-tier — selectable + Sol's subagent. see openai above.
@@ -1096,9 +1189,9 @@ export const providers = {
       },
       "gpt-luna": {
         displayName: "GPT Luna",
-        resolve: "openrouter/openai/gpt-5.6-luna",
+        resolve: "openrouter/openai/gpt-6-luna",
         effort: ["none", "low", "medium", "high", "xhigh", "max"],
-        openRouterResolve: "openrouter/openai/gpt-5.6-luna",
+        openRouterResolve: "openrouter/openai/gpt-6-luna",
       },
       // legacy aliases — see openai provider for context.
       "gpt-codex": {
@@ -1230,12 +1323,20 @@ export const providers = {
         effort: ["minimal", "low", "medium", "high", "xhigh", "max"],
         openRouterResolve: "openrouter/meta/muse-spark-1.3-contributor",
       },
+      // Mistral's flagship (public preview, 2026-10-06), on the routers and
+      // Zen only: the catalog carries no direct Mistral provider.
+      "mistral-large": {
+        displayName: "Mistral Large",
+        resolve: "openrouter/mistralai/mistral-large-4-0",
+        effort: ["none", "high"],
+        openRouterResolve: "openrouter/mistralai/mistral-large-4-0",
+      },
     },
   }),
   vercel: provider({
     // Vercel AI Gateway — one key serves every model it fronts. model IDs use
     // the models.dev `vercel` catalog's own naming (dotted versions, e.g.
-    // `anthropic/claude-opus-5`, `zai/glm-5.3`). effort ladders come from the
+    // `anthropic/claude-opus-5.5`, `zai/glm-5.3`). effort ladders come from the
     // gateway's OWN `/v1/models`, not models.dev — the two disagree routinely
     // (on 2026-09-22 they disagreed on all ten entries that drifted), and the
     // drift test reads the gateway for that reason. deliberately no
@@ -1247,24 +1348,25 @@ export const providers = {
     models: {
       "claude-opus": {
         displayName: "Claude Opus",
-        resolve: "vercel/anthropic/claude-opus-5",
-        effort: ["none", "low", "medium", "high", "xhigh"],
+        resolve: "vercel/anthropic/claude-opus-5.5",
+        effort: ["low", "medium", "high", "xhigh", "max"],
         preferred: true,
         subagentModel: "claude-sonnet",
       },
       "claude-sonnet": {
         displayName: "Claude Sonnet",
-        resolve: "vercel/anthropic/claude-sonnet-5",
-        effort: ["none", "low", "medium", "high", "xhigh"],
+        resolve: "vercel/anthropic/claude-sonnet-5.5",
+        effort: ["low", "medium", "high", "xhigh", "max"],
       },
       "claude-haiku": {
         displayName: "Claude Haiku",
-        resolve: "vercel/anthropic/claude-haiku-4.5",
+        resolve: "vercel/anthropic/claude-haiku-5.5",
+        effort: ["none", "low", "medium", "high", "xhigh", "max"],
       },
       "gpt-sol": {
         displayName: "GPT Sol",
-        resolve: "vercel/openai/gpt-5.6-sol",
-        effort: ["none", "minimal", "low", "medium", "high", "xhigh", "max"],
+        resolve: "vercel/openai/gpt-6.1-sol",
+        effort: ["low", "medium", "high", "xhigh", "max"],
         subagentModel: "gpt-terra",
       },
       "gpt-astra": {
@@ -1280,7 +1382,7 @@ export const providers = {
       },
       "gpt-luna": {
         displayName: "GPT Luna",
-        resolve: "vercel/openai/gpt-5.6-luna",
+        resolve: "vercel/openai/gpt-6-luna",
         effort: ["none", "low", "medium", "high", "xhigh", "max"],
       },
       "gemini-pro": {
@@ -1296,7 +1398,7 @@ export const providers = {
       "deepseek-pro": {
         displayName: "DeepSeek Pro",
         resolve: "vercel/deepseek/deepseek-v4-pro-0813",
-        effort: ["none", "high", "max"],
+        effort: ["none", "low", "high", "max"],
       },
       // the gateway's bare `deepseek-v4-flash` is the April preview — the same
       // fork trap as OpenRouter, with `deepseek-v4-flash-0731` beside it — so
@@ -1304,7 +1406,7 @@ export const providers = {
       "deepseek-flash": {
         displayName: "DeepSeek Flash",
         resolve: "vercel/deepseek/deepseek-v4.1-flash",
-        effort: ["none", "high", "max"],
+        effort: ["none", "low", "high", "max"],
       },
       glm: {
         displayName: "GLM",
@@ -1320,6 +1422,11 @@ export const providers = {
         displayName: "Muse Spark",
         resolve: "vercel/meta/muse-spark-1.3",
         effort: ["minimal", "low", "medium", "high", "xhigh"],
+      },
+      "mistral-large": {
+        displayName: "Mistral Large",
+        resolve: "vercel/mistral/mistral-large-4",
+        effort: ["none", "high"],
       },
     },
   }),
@@ -1350,6 +1457,12 @@ export function getProviderDisplayName(slug: string): string | undefined {
 export function stripProviderPrefix(specifier: string): string {
   const slashIndex = specifier.indexOf("/");
   return slashIndex > 0 ? specifier.slice(slashIndex + 1) : specifier;
+}
+
+/** specifier → the model's own id, for display: `openrouter/~anthropic/claude-opus-latest` →
+ * `claude-opus-latest`. names what an alias points at today, which its name does not. */
+export function modelIdLabel(specifier: string): string {
+  return specifier.slice(specifier.lastIndexOf("/") + 1).replace(/^~/, "");
 }
 
 export function getModelEnvVars(slug: string): string[] {
@@ -1431,6 +1544,37 @@ export function modelHasStoredAuth(params: { model: string; secretNames: string[
     ...(HARNESS_ONLY_CREDENTIALS[getModelProvider(slug)] ?? []),
   ];
   return authVars.some((v) => params.secretNames.includes(v));
+}
+
+/**
+ * `proxyOptOut`, spelled the way run-context spells it: a Router run skips the
+ * mint when the pick is FREE or a Pullfrog-stored key covers it, and then runs
+ * as-configured rather than clamping to the auto tier.
+ *
+ * one predicate for every reader — the console picker's `customLocked`, the
+ * effort ladder's `resolveRunning` and `resolvePickModel`. they held two
+ * copies and the free half was missing from both, which put the whole `opencode/*` free tier (`opencode/big-pickle`
+ * is `preferred`, so the most-picked model there is) behind "add a payment
+ * method to run it" on a card-less Router repo, against a server that ran it.
+ */
+export function routerProxyOptOut(ctx: { slug: string | null; secretNames: string[] }) {
+  if (ctx.slug === null) return false;
+  return (
+    resolveDisplayAlias(ctx.slug)?.isFree === true ||
+    modelHasStoredAuth({ model: ctx.slug, secretNames: ctx.secretNames })
+  );
+}
+
+/** the specifier a pick runs as: its OpenRouter target on a proxied account (Router, the OSS
+ * subsidy), which mints for every pick `routerProxyOptOut` does not exempt, else its direct one. */
+export function resolvePickModel(params: {
+  slug: string;
+  proxied: boolean;
+  secretNames: string[];
+}): string | undefined {
+  return params.proxied && !routerProxyOptOut(params)
+    ? resolveOpenRouterModel(params.slug)
+    : resolveCliModel(params.slug);
 }
 
 // ── derived flat list ──────────────────────────────────────────────────────────
@@ -1537,12 +1681,13 @@ type Ladder = Record<RouterTier, string>;
  * (Luna/Terra/Sol/Astra): the console lists the whole ladder as what Auto runs
  * on, so every rung is a model the customer can see. anthropic doubles Opus at
  * `deep` because Fable is access-gated (see its alias) and an automatic rung
- * must run on every accepted credential; a two-model provider doubles up at
- * the cheap end.
+ * must run on every accepted credential, and doubles Sonnet at `minimal`
+ * because Haiku 4.5 ends most reviews without ever submitting one (see
+ * wiki/router.md); a two-model provider doubles up at the cheap end.
  */
 const PROVIDER_LADDERS: Record<string, Ladder> = {
   anthropic: {
-    minimal: "anthropic/claude-haiku",
+    minimal: "anthropic/claude-sonnet",
     light: "anthropic/claude-sonnet",
     standard: "anthropic/claude-opus",
     deep: "anthropic/claude-opus",
@@ -1835,14 +1980,17 @@ for (const [name, ladder] of Object.entries({ ...PROVIDER_LADDERS, router: ROUTE
 // the two derived ones are derived because #1190 updated the other two and
 // missed these, leaving the application page selling one model the program had
 // stopped defaulting to, for two allowlist edits running.
+// ordered by Artificial Analysis Intelligence Index, highest first (2026-10-06:
+// Muse Spark 1.3 48, DeepSeek V4.1 Flash 39, GPT-6 Luna 38, MiniMax below
+// M3's 29), so every surface that lists the menu reads best-first.
 export const OSS_MODEL_ALLOWLIST: readonly string[] = [
-  "deepseek/deepseek-flash",
-  "openai/gpt-luna",
-  "openrouter/minimax-m2.5",
   // opt-in: 0.86x the old default on the measured mix, and Meta trains on the
   // traffic — fine for public code on headless runs, the human decided
   // 2026-09-11. unmeasured on a real run; not the default until it is.
   "meta/muse-spark-contributor",
+  "deepseek/deepseek-flash",
+  "openai/gpt-luna",
+  "openrouter/minimax-m2.5",
 ];
 
 /** the pick the console badges. DERIVED from the efficient tier rather than

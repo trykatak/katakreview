@@ -3,13 +3,14 @@
  * on explicit HTTP status / validation errors that carry their own message).
  *
  * Matches errors from `fetch` (`fetch failed`), TCP-level interruption
- * (`ECONNRESET`, `ETIMEDOUT`), and `AbortSignal.timeout` (`AbortError`).
+ * (`ECONNRESET`, `ETIMEDOUT`), and aborts — `AbortSignal.timeout` rejects with
+ * `TimeoutError`, a manual abort with `AbortError` (#1354).
  * Callers may pass `extraPatterns` to whitelist additional transient
  * substrings on `error.message` (e.g. provider-specific framings).
  */
 export function isTransientNetworkError(error: unknown, extraPatterns: string[] = []): boolean {
   if (!(error instanceof Error)) return false;
-  if (error.name === "AbortError") return true;
+  if (error.name === "AbortError" || error.name === "TimeoutError") return true;
   const patterns = ["fetch failed", "ECONNRESET", "ETIMEDOUT", ...extraPatterns];
   return patterns.some((p) => error.message.includes(p));
 }

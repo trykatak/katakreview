@@ -89,9 +89,11 @@ describe("spawn error path", () => {
     // present so downstream consumers can detect the truncation.
     const result = await spawn({
       cmd: "bash",
-      // print ~2 MiB to stderr in 64 KiB chunks. `yes` + head gives us a
-      // reliable byte budget that's well above the 256 KiB cap below.
-      args: ["-c", "yes ABCDEFGH | head -c 2097152 1>&2"],
+      // print ~2 MiB to stderr in 64 KiB chunks. /dev/zero + head gives us a
+      // reliable byte budget that's well above the 256 KiB cap below. not
+      // `yes`: the `yes` npm package's node bin shadows coreutils on PATH and
+      // flips the shared stderr pipe to O_NONBLOCK, so `head` hits EAGAIN.
+      args: ["-c", "head -c 2097152 /dev/zero | tr '\\0' A 1>&2"],
       env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "" },
       activityTimeout: 0,
       maxRetainedBytes: 256 * 1024,

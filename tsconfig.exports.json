@@ -6,5 +6,5 @@
     "declarationMap": false,
     "outDir": "./dist"
   },
-  "include": ["index.ts", "internal/index.ts", "yes/index.ts"]
+  "include": ["index.ts", "internal/index.ts"]
 }

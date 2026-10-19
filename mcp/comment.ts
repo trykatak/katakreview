@@ -38,7 +38,6 @@ function buildCommentFooter(ctx: ToolContext, customParts?: string[]): string {
         : undefined,
     customParts,
     model: ctx.toolState.model,
-    fallbackFrom: ctx.toolState.modelFallback?.from,
     clamped: ctx.toolState.modelClamped,
     unselectedProxyDefault: ctx.toolState.unselectedProxyDefault,
     oss: ctx.oss,
@@ -49,6 +48,21 @@ function buildCommentFooter(ctx: ToolContext, customParts?: string[]): string {
 function buildImplementPlanLink(ctx: ToolContext, issueNumber: number, commentId: number): string {
   const apiUrl = getApiUrl();
   return `[Implement plan ➔](${apiUrl}/trigger/${ctx.repo.owner}/${ctx.repo.name}/${issueNumber}?action=implement&comment_id=${commentId})`;
+}
+
+function buildEnrichmentLinks(ctx: ToolContext): string[] {
+  const event = ctx.payload.event;
+  if (
+    event.trigger !== "issues_opened" ||
+    event.is_pr ||
+    ctx.payload.prompt ||
+    ctx.toolState.selectedMode === "Build"
+  ) {
+    return [];
+  }
+  return [
+    `[Implement a fix ➔](${getApiUrl()}/trigger/${ctx.repo.owner}/${ctx.repo.name}/${event.issue_number}?action=build)`,
+  ];
 }
 
 export function addFooter(ctx: ToolContext, body: string): string {
@@ -101,14 +115,19 @@ export function CreateCommentTool(ctx: ToolContext) {
         ctx.toolState.standaloneCommentId = result.data.id;
       }
 
-      if (commentType === "Plan") {
-        if (result.data.node_id) {
+      const enrichmentLinks =
+        issueNumber === ctx.payload.event.issue_number ? buildEnrichmentLinks(ctx) : [];
+      if (commentType === "Plan" || enrichmentLinks.length > 0) {
+        if (commentType === "Plan" && result.data.node_id) {
           await patchWorkflowRunFields(ctx, { planCommentNodeId: result.data.node_id });
         }
         // add "Implement plan" link (needs comment ID, so create-then-update)
-        const customParts = [buildImplementPlanLink(ctx, issueNumber, result.data.id)];
+        const customParts =
+          commentType === "Plan"
+            ? [buildImplementPlanLink(ctx, issueNumber, result.data.id)]
+            : enrichmentLinks;
         const footer = buildCommentFooter(ctx, customParts);
-        const bodyWithPlanLink = `${stripExistingFooter(body)}${footer}`;
+        const bodyWithPlanLink = `${stripExistingFooter(bodyWithFooter)}${footer}`;
 
         const updateResult = await ctx.octokit.rest.issues.updateComment({
           owner: ctx.repo.owner,
@@ -174,6 +193,9 @@ export const ReportProgress = type({
   "target_plan_comment?": type("boolean").describe(
     "for revising an existing plan comment ONLY. set to true only when the PlanEdit checklist from select_mode tells you to (i.e. a prior plan comment was found for this issue). NEVER set on the initial plan post — the initial plan reuses the run's progress comment and is posted by calling report_progress without this flag."
   ),
+  "no_review_needed?": type("boolean").describe(
+    "IncrementalReview only: true when you judged the new commits need no review, never for a blocker."
+  ),
 });
 
 /**
@@ -226,6 +248,7 @@ export async function reportProgress(
 
   const issueNumber = ctx.payload.event.issue_number ?? primaryRepoState(ctx.toolState).issueNumber;
   const isPlanMode = ctx.toolState.selectedMode === "Plan";
+  const enrichmentLinks = params.liveProgress ? [] : buildEnrichmentLinks(ctx);
   const apiCtx = { octokit: ctx.octokit, owner: ctx.repo.owner, repo: ctx.repo.name };
 
   // when editing existing plan: update the plan comment from tool state (set by select_mode)
@@ -236,7 +259,7 @@ export async function reportProgress(
     const commentId = ctx.toolState.existingPlanCommentId;
     const customParts =
       issueNumber !== undefined ? [buildImplementPlanLink(ctx, issueNumber, commentId)] : undefined;
-    const bodyWithoutFooter = stripExistingFooter(body);
+    const bodyWithoutFooter = stripExistingFooter(fixDoubleEscapedString(body));
     const footer = buildCommentFooter(ctx, customParts);
     const bodyWithFooter = `${bodyWithoutFooter}${footer}`;
 
@@ -267,9 +290,9 @@ export async function reportProgress(
     const customParts =
       isPlanMode && issueNumber !== undefined
         ? [buildImplementPlanLink(ctx, issueNumber, existingComment.id)]
-        : undefined;
+        : enrichmentLinks;
 
-    const bodyWithoutFooter = stripExistingFooter(body);
+    const bodyWithoutFooter = stripExistingFooter(fixDoubleEscapedString(body));
     const footer = buildCommentFooter(ctx, customParts);
     const bodyWithFooter = `${bodyWithoutFooter}${footer}`;
 
@@ -352,15 +375,17 @@ export async function reportProgress(
   if (!params.liveProgress) ctx.toolState.wasUpdated = true;
 
   // if Plan mode, update the comment to add the "Implement plan" link
-  if (isPlanMode) {
-    const customParts = [buildImplementPlanLink(ctx, issueNumber, created.comment.id)];
-    const bodyWithoutFooter = stripExistingFooter(body);
+  if (isPlanMode || enrichmentLinks.length > 0) {
+    const customParts = isPlanMode
+      ? [buildImplementPlanLink(ctx, issueNumber, created.comment.id)]
+      : enrichmentLinks;
+    const bodyWithoutFooter = stripExistingFooter(initialBody);
     const footer = buildCommentFooter(ctx, customParts);
     const bodyWithPlanLink = `${bodyWithoutFooter}${footer}`;
 
     const updateResult = await updateProgressComment(apiCtx, created.comment, bodyWithPlanLink);
 
-    if (updateResult.node_id) {
+    if (isPlanMode && updateResult.node_id) {
       await patchWorkflowRunFields(ctx, { planCommentNodeId: updateResult.node_id });
     }
 
@@ -390,6 +415,9 @@ export function ReportProgressTool(ctx: ToolContext) {
       "Call this at the end of every run with a brief final summary (1-3 sentences) unless the mode guidance instructs otherwise. The current task list is automatically appended in a collapsible section — do not restate individual steps.",
     parameters: ReportProgress,
     execute: execute(async (params) => {
+      if (params.no_review_needed) {
+        ctx.toolState.noReviewNeededSha = primaryRepoState(ctx.toolState).checkoutSha;
+      }
       // a standalone comment already delivered this run's answer to its own
       // target. writing here too leaves two comments restating each other, and
       // flipping finalSummaryWritten would also preserve the progress comment
@@ -534,6 +562,27 @@ export function duplicateReplyDecision(params: {
   };
 }
 
+/**
+ * a single-comment dispatch seeds the progress comment as a reply in the thread
+ * the user pinged. once the agent answers that thread itself, the run summary
+ * there is a second, redundant reply — drop it, as create_pull_request_review
+ * drops the progress comment its review supersedes.
+ */
+async function deleteProgressReplyInThread(
+  ctx: ToolContext,
+  threadRootId: number | undefined
+): Promise<void> {
+  const progress = ctx.toolState.progressComment;
+  if (progress?.type !== "review" || threadRootId === undefined) return;
+  const seeded = await ctx.octokit.rest.pulls.getReviewComment({
+    owner: ctx.repo.owner,
+    repo: ctx.repo.name,
+    comment_id: progress.id,
+  });
+  if (seeded.data.in_reply_to_id !== threadRootId) return;
+  await deleteProgressComment(ctx);
+}
+
 export function ReplyToReviewCommentTool(ctx: ToolContext) {
   return tool({
     name: "reply_to_review_comment",
@@ -582,6 +631,11 @@ export function ReplyToReviewCommentTool(ctx: ToolContext) {
         commentId: result.data.id,
         url: result.data.html_url,
         bodyWithFooter,
+      });
+
+      // the reply already landed; failing to tidy the progress comment must not fail it.
+      await deleteProgressReplyInThread(ctx, result.data.in_reply_to_id).catch((error) => {
+        log.debug(`progress reply cleanup failed: ${error}`);
       });
 
       return {

@@ -49,6 +49,18 @@ interface NpmRegistryData {
 }
 
 /**
+ * The npm that launched this CLI through `npx`, run under our own node. A bare
+ * `npm` resolves the runner's `externals/node24/bin/npm` first (the bootstrap
+ * prepends that dir), and self-hosted pools ship it as a shim over a missing
+ * `lib/cli.js` — the same partial tree #1084 hit for `npx`.
+ */
+function resolveNpm(): { command: string; args: string[] } {
+  const npmCli = process.env.npm_execpath;
+  if (npmCli?.endsWith("npm-cli.js")) return { command: process.execPath, args: [npmCli] };
+  return { command: "npm", args: [] };
+}
+
+/**
  * Install a CLI tool from an npm package tarball
  * Downloads the tarball, extracts it to a temp directory, and returns the path to the CLI executable
  * The temp directory will be cleaned up by the OS automatically
@@ -141,7 +153,8 @@ export async function installFromNpmTarball(params: InstallFromNpmTarballParams)
   // Install dependencies if requested
   if (params.installDependencies) {
     log.debug(`» installing dependencies for ${params.packageName}...`);
-    const installResult = spawnSync("npm", ["install", "--production"], {
+    const npm = resolveNpm();
+    const installResult = spawnSync(npm.command, [...npm.args, "install", "--production"], {
       cwd: extractedDir,
       stdio: "pipe",
       encoding: "utf-8",

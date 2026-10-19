@@ -112,13 +112,13 @@ describe("resolveAgent", () => {
 describe("resolveModel", () => {
   it("KATAK_MODEL override wins", () => {
     process.env.KATAK_MODEL = "anthropic/claude-opus";
-    expect(resolveModel({ slug: "openai/gpt" })).toBe("anthropic/claude-opus-5");
+    expect(resolveModel({ slug: "openai/gpt" })).toBe("anthropic/claude-opus-5-5");
   });
 
   it("KATAK_MODEL bypasses bedrock routing entirely", () => {
     process.env.KATAK_MODEL = "openai/gpt";
     process.env.BEDROCK_MODEL_ID = "us.anthropic.claude-opus-4-7";
-    expect(resolveModel({ slug: "bedrock/byok" })).toBe("openai/gpt-5.6-sol");
+    expect(resolveModel({ slug: "bedrock/byok" })).toBe("openai/gpt-6.1-sol");
   });
 
   it("resolves bedrock/byok to BEDROCK_MODEL_ID", () => {
@@ -131,7 +131,7 @@ describe("resolveModel", () => {
   });
 
   it("returns the alias resolve for normal slugs", () => {
-    expect(resolveModel({ slug: "openai/gpt" })).toBe("openai/gpt-5.6-sol");
+    expect(resolveModel({ slug: "openai/gpt" })).toBe("openai/gpt-6.1-sol");
   });
 
   it("returns undefined for no slug + no KATAK_MODEL", () => {

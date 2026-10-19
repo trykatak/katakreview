@@ -1,9 +1,10 @@
+import * as yes from "yes";
 import type { AgentUsage } from "../agents/shared.ts";
 import type { ToolContext } from "../mcp/server.ts";
-import * as yes from "../yes/index.ts";
 import { apiFetch } from "./apiFetch.ts";
 import { log } from "./cli.ts";
 import { isTransientNetworkError } from "./isTransientNetworkError.ts";
+import { START_KEY } from "./runContext.ts";
 
 /**
  * String-valued PATCH fields (all serialized identically on the wire):
@@ -14,6 +15,9 @@ import { isTransientNetworkError } from "./isTransientNetworkError.ts";
  *    `Repo.model` slug), PATCHed once at end-of-run so per-model cost analytics
  *    don't parse the audit-only `payload`.
  * Keep in sync with `STRING_FIELDS` in `app/api/workflow-run/[runId]/route.ts`.
+ * `succeeded` and the usage fields below are this start's own report: a custom
+ * workflow can start the action several times in one run, and the server keeps
+ * one row per start, keyed by `START_KEY`, and sums them onto the run.
  */
 const STRING_KEYS = [
   "prNodeId",
@@ -40,8 +44,12 @@ const NUMBER_KEYS = [
   "costUsd",
 ] as const;
 
+/** one-way flags, only ever sent as `true`. Keep in sync with `BOOLEAN_FIELDS` in the server route. */
+const FLAG_KEYS = ["reviewSkipped"] as const;
+
 export type WorkflowRunPatch = Partial<Record<(typeof STRING_KEYS)[number], string>> &
-  Partial<Record<(typeof NUMBER_KEYS)[number], number>>;
+  Partial<Record<(typeof NUMBER_KEYS)[number], number>> &
+  Partial<Record<(typeof FLAG_KEYS)[number], true>> & { succeeded?: boolean };
 
 /** PATCH workflow-run fields (Pullfrog JWT, not GitHub). */
 export async function patchWorkflowRunFields(
@@ -49,11 +57,11 @@ export async function patchWorkflowRunFields(
   fields: WorkflowRunPatch
 ): Promise<void> {
   if (ctx.runId === undefined || !ctx.apiToken) return;
-  // a 404 means the reservation was never claimed, and the claim happens at
-  // setup — strictly before any PATCH — so it can never become claimable later
-  // in this run. see #1153.
+  // a 404 means Pullfrog neither claimed a reservation for the run nor recorded it
+  // as a custom run; both happen at setup — strictly before any PATCH — so neither
+  // can change later in this run. see #1153.
   if (ctx.toolState.workflowRunUnclaimed) return;
-  const body: Record<string, string | number> = {};
+  const body: Record<string, string | number | boolean> = {};
   for (const key of STRING_KEYS) {
     const value = fields[key];
     if (typeof value === "string" && value.length > 0) {
@@ -66,10 +74,17 @@ export async function patchWorkflowRunFields(
       body[key] = value;
     }
   }
+  for (const key of FLAG_KEYS) {
+    if (fields[key]) body[key] = true;
+  }
+  if (fields.succeeded !== undefined) body.succeeded = fields.succeeded;
   if (Object.keys(body).length === 0) return;
+  body.startKey = START_KEY;
+  const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT);
+  if (Number.isInteger(runAttempt) && runAttempt >= 1) body.runAttempt = runAttempt;
   try {
-    await yes.op(
-      async () => {
+    await yes.mutation({
+      run: async (patch: typeof body, opCtx: yes.ctx) => {
         const response = await apiFetch({
           path: `/api/workflow-run/${ctx.runId}`,
           method: "PATCH",
@@ -77,20 +92,25 @@ export async function patchWorkflowRunFields(
             authorization: `Bearer ${ctx.apiToken}`,
             "content-type": "application/json",
           },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(10_000),
+          body: JSON.stringify(patch),
+          signal: opCtx.signal,
         });
-        if (response.status === 404) ctx.toolState.workflowRunUnclaimed = true;
+        if (response.status === 404) {
+          // a run Pullfrog neither dispatched nor could record (see wiki/run-correlation.md), so
+          // no annotation: the runner can't act on it, and the server logs each one.
+          ctx.toolState.workflowRunUnclaimed = true;
+          log.info(`» Pullfrog has no record of run ${ctx.runId}; skipping run metadata updates`);
+          return;
+        }
         if (!response.ok) throw new Error(`PATCH workflow-run: ${response.status}`);
       },
-      {
-        retries: [2000, 4000],
-        name: "patchWorkflowRunFields",
-        // only retry transient network errors; explicit HTTP failures throw
-        // a status-bearing message and should fail fast.
-        bail: (error) => !isTransientNetworkError(error),
-      }
-    )();
+      // only retry transient network errors; explicit HTTP failures throw
+      // a status-bearing message and should fail fast.
+      retry: (error, attempt) =>
+        isTransientNetworkError(error) ? yes.delay([2000, 4000], attempt) : -1,
+      timeout: 10_000,
+      name: "patchWorkflowRunFields",
+    })(body);
   } catch (error) {
     // not necessarily exhausted — an explicit HTTP status bails on the first
     // attempt via the predicate above, so say "failed" rather than implying

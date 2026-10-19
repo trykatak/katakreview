@@ -34,7 +34,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
-import * as core from "@actions/core";
 import type { ThreadEvent, ThreadItem } from "@openai/codex-sdk";
 import { pullfrogMcpName } from "../external.ts";
 import { getModelProvider, getProviderGatewayUrl, stripProviderPrefix } from "../models.ts";
@@ -46,6 +45,7 @@ import { installFromNpmTarball } from "../utils/install.ts";
 import { OAUTH_WRITEBACK_STATE } from "../utils/oauthWriteback.ts";
 import { findProviderErrorMatch } from "../utils/providerErrors.ts";
 import { resolveRunEffort } from "../utils/runEffort.ts";
+import { saveSecretState } from "../utils/secretCommands.ts";
 import { filterEnv } from "../utils/secrets.ts";
 import {
   DEFAULT_MAX_RETAINED_BYTES,
@@ -579,8 +579,8 @@ const CODEX_MODEL_PRICING: Record<
   { input: number; cacheRead: number; cacheWrite: number; output: number }
 > = {
   "gpt-6-astra": { input: 10, cacheRead: 1, cacheWrite: 12.5, output: 50 },
-  "gpt-5.6-sol": { input: 5, cacheRead: 0.5, cacheWrite: 6.25, output: 30 },
-  "gpt-5.6-luna": { input: 0.2, cacheRead: 0.02, cacheWrite: 0.25, output: 1.2 },
+  "gpt-6.1-sol": { input: 2, cacheRead: 0.1, cacheWrite: 2.5, output: 10 },
+  "gpt-6-luna": { input: 0.1, cacheRead: 0.01, cacheWrite: 0.125, output: 0.5 },
   "gpt-5.6-terra": { input: 2, cacheRead: 0.2, cacheWrite: 2.5, output: 12 },
 };
 
@@ -888,7 +888,7 @@ export const codex = agent({
       // the CLI rewrites auth.json in place when the chain rotates; the post
       // hook diffs it and PUTs the new blob back to Pullfrog. see
       // wiki/codex-auth.md — a rotation we fail to persist expires in ~1h.
-      core.saveState(
+      saveSecretState(
         OAUTH_WRITEBACK_STATE,
         JSON.stringify({
           apiToken: ctx.apiToken,
@@ -970,9 +970,8 @@ export const codex = agent({
       initialUsage: initial.usage,
       reflectionPrompt: buildReflectionPrompt(ctx.toolState),
       // a resume needs the thread codex recorded. without one there is nothing
-      // to continue, and `resume --last` would be worse than not resuming: it
-      // picks the newest recorded session in this cwd, which on a self-hosted
-      // runner with a shared CODEX_HOME is somebody else's run.
+      // to continue, and `resume --last` could pick another run's session off CI,
+      // where CODEX_HOME is the shared ~/.local/share/codex (in CI it is per run).
       canResume: (r) => r.threadId !== undefined,
       resume: async (c) =>
         runCodex({

@@ -1,5 +1,6 @@
 import type { RestEndpointMethodTypes } from "@octokit/rest";
 import { type } from "arktype";
+import * as yes from "yes";
 import { formatMcpToolRef } from "../external.ts";
 import { type CommentableLines, primaryRepoState } from "../toolState.ts";
 import { getApiUrl } from "../utils/apiUrl.ts";
@@ -8,8 +9,8 @@ import { log } from "../utils/cli.ts";
 import { countLinesInRanges, getDiffCoverageBreakdown } from "../utils/diffCoverage.ts";
 import { fixDoubleEscapedString } from "../utils/fixDoubleEscapedString.ts";
 import { isPullfrog } from "../utils/isPullfrog.ts";
+import { countOutstandingPullfrogThreads } from "../utils/outstandingThreads.ts";
 import { patchWorkflowRunFields } from "../utils/patchWorkflowRunFields.ts";
-import * as yes from "../yes/index.ts";
 import { deleteProgressComment } from "./comment.ts";
 import type { ToolContext } from "./server.ts";
 import { execute, getHttpStatus, tool } from "./shared.ts";
@@ -111,84 +112,6 @@ export async function buildCommentableMap(
     map.set(file.filename, commentableLinesForFile(file.patch));
   }
   return map;
-}
-
-/**
- * lightweight paginated query for the approval gate: we only need each thread's
- * resolved state and its ROOT author (oldest comment, hence `first: 1`) to count
- * outstanding Pullfrog findings. distinct from REVIEW_THREADS_QUERY, which pages
- * the same connection but carries full comment bodies — the invariant must hold
- * on PRs with >100 threads, since a silent first-100 cap would let a finding
- * beyond #100 slip an approval through.
- */
-const OUTSTANDING_THREADS_QUERY = `
-query ($owner: String!, $name: String!, $prNumber: Int!, $cursor: String) {
-  repository(owner: $owner, name: $name) {
-    pullRequest(number: $prNumber) {
-      reviewThreads(first: 100, after: $cursor) {
-        pageInfo { hasNextPage endCursor }
-        nodes {
-          isResolved
-          comments(first: 1) { nodes { author { login } } }
-        }
-      }
-    }
-  }
-}
-`;
-
-type OutstandingThreadsResponse = {
-  repository: {
-    pullRequest: {
-      reviewThreads: {
-        pageInfo: { hasNextPage: boolean; endCursor: string | null };
-        nodes:
-          | ({
-              isResolved: boolean;
-              comments: { nodes: ({ author: { login: string } | null } | null)[] | null } | null;
-            } | null)[]
-          | null;
-      } | null;
-    } | null;
-  } | null;
-};
-
-/**
- * count unresolved review threads on a PR whose root comment was authored by
- * Pullfrog's bot. this is the full set of open Pullfrog findings on the PR —
- * the basis for both the never-approve-with-outstanding-issues invariant (the
- * approval gate below) and the `pullfrog-approval` status verdict. it is a
- * function of all open findings, NOT just the latest commit's delta.
- *
- * outdated-but-unresolved threads still count — GitHub marks a thread
- * `[OUTDATED]` when the anchor line moved (reformat, rename, force-push), which
- * is not the same as the concern being addressed. human-reviewer threads are
- * excluded: they belong to those reviewers to resolve. walks every page so a
- * long-lived PR with >100 threads can't hide an outstanding finding.
- */
-export async function countOutstandingPullfrogThreads(
-  ctx: ToolContext,
-  pullNumber: number
-): Promise<number> {
-  let count = 0;
-  let cursor: string | null = null;
-  // bound the walk so a misbehaving cursor can't loop forever; 50 pages = 5000
-  // threads, orders of magnitude beyond any real PR.
-  for (let page = 0; page < 50; page += 1) {
-    const response: OutstandingThreadsResponse = await ctx.octokit.graphql(
-      OUTSTANDING_THREADS_QUERY,
-      { owner: ctx.repo.owner, name: ctx.repo.name, prNumber: pullNumber, cursor }
-    );
-    const conn = response.repository?.pullRequest?.reviewThreads;
-    for (const thread of conn?.nodes ?? []) {
-      if (!thread || thread.isResolved) continue;
-      const root = thread.comments?.nodes?.find((c) => c != null);
-      if (root && isPullfrog(root.author?.login)) count += 1;
-    }
-    if (!conn?.pageInfo.hasNextPage) break;
-    cursor = conn.pageInfo.endCursor;
-  }
-  return count;
 }
 
 /**
@@ -864,12 +787,12 @@ export function CreatePullRequestReviewTool(ctx: ToolContext) {
         // which all cite the specific cause) clears on its own instead of
         // surfacing through the generic 422 handler — that framing sent the
         // agent dropping valid inline comments chasing a non-issue.
-        // `bail` scopes retries to the transient body only, so real
+        // `rethrow` scopes retries to the transient body only, so real
         // validation 422s still fail fast.
         let result;
         try {
-          result = await yes.op(
-            () =>
+          result = await yes.mutation({
+            run: () =>
               body
                 ? createAndSubmitWithFooter(ctx, params, {
                     body,
@@ -877,12 +800,12 @@ export function CreatePullRequestReviewTool(ctx: ToolContext) {
                     hasComments: (params.comments?.length ?? 0) > 0,
                   })
                 : createReviewWithStrandedRecovery(ctx, params),
-            {
-              retries: TRANSIENT_REVIEW_RETRY_DELAYS_MS,
-              bail: (err) => !isTransientReviewError(err),
-              name: "review submission",
-            }
-          )();
+            retry: (error, attempt) =>
+              isTransientReviewError(error)
+                ? yes.delay(TRANSIENT_REVIEW_RETRY_DELAYS_MS, attempt)
+                : -1,
+            name: "review submission",
+          })();
         } catch (err: unknown) {
           // the "would approve" verdict was recorded before this POST; a failed
           // submit must roll it back so a transient failure cannot fail-open into
@@ -1222,7 +1145,6 @@ export async function createAndSubmitWithFooter(
         : undefined,
       customParts,
       model: ctx.toolState.model,
-      fallbackFrom: ctx.toolState.modelFallback?.from,
       clamped: ctx.toolState.modelClamped,
       unselectedProxyDefault: ctx.toolState.unselectedProxyDefault,
       oss: ctx.oss,

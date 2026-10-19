@@ -74,7 +74,7 @@ describe("getModelEnvVars", () => {
 describe("resolveModelSlug", () => {
   it("resolves known alias to concrete specifier", () => {
     const resolved = resolveModelSlug("anthropic/claude-opus");
-    expect(resolved).toBe("anthropic/claude-opus-5");
+    expect(resolved).toBe("anthropic/claude-opus-5-5");
   });
 
   it("resolves openai alias", () => {
@@ -107,10 +107,10 @@ describe("resolveCliModel", () => {
   });
 
   it("walks fallback chain for deprecated openai codex aliases", () => {
-    expect(resolveCliModel("openai/gpt-codex")).toBe("openai/gpt-5.6-sol");
-    expect(resolveCliModel("openai/gpt-codex-mini")).toBe("openai/gpt-5.6-luna");
-    expect(resolveCliModel("opencode/gpt-codex")).toBe("opencode/gpt-5.6-sol");
-    expect(resolveCliModel("openrouter/gpt-codex")).toBe("openrouter/openai/gpt-5.6-sol");
+    expect(resolveCliModel("openai/gpt-codex")).toBe("openai/gpt-6.1-sol");
+    expect(resolveCliModel("openai/gpt-codex-mini")).toBe("openai/gpt-6-luna");
+    expect(resolveCliModel("opencode/gpt-codex")).toBe("opencode/gpt-6.1-sol");
+    expect(resolveCliModel("openrouter/gpt-codex")).toBe("openrouter/openai/gpt-6.1-sol");
   });
 
   it("walks fallback chain for hidden deprecated minimax-m2.5-free", () => {
@@ -145,7 +145,7 @@ describe("resolveDisplayAlias", () => {
 describe("resolveOpenRouterModel", () => {
   it("returns the openrouter specifier for a non-deprecated alias", () => {
     expect(resolveOpenRouterModel("anthropic/claude-opus")).toBe(
-      "openrouter/anthropic/claude-opus-5"
+      "openrouter/anthropic/claude-opus-5.5"
     );
   });
 
@@ -162,8 +162,8 @@ describe("resolveOpenRouterModel", () => {
   });
 
   it("walks fallback chain for deprecated openai codex aliases", () => {
-    expect(resolveOpenRouterModel("openai/gpt-codex")).toBe("openrouter/openai/gpt-5.6-sol");
-    expect(resolveOpenRouterModel("openai/gpt-codex-mini")).toBe("openrouter/openai/gpt-5.6-luna");
+    expect(resolveOpenRouterModel("openai/gpt-codex")).toBe("openrouter/openai/gpt-6.1-sol");
+    expect(resolveOpenRouterModel("openai/gpt-codex-mini")).toBe("openrouter/openai/gpt-6-luna");
   });
 
   it("returns undefined for free opencode models with no openrouter equivalent", () => {

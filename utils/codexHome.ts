@@ -31,8 +31,8 @@
 //      refresh_token, id_token?, account_id? } }` into OpenCode's shape
 //      `{ openai: { type: "oauth", refresh, access, expires, accountId } }`
 //   4. materializes it to disk under a path the MCP-shell mount-namespace
-//      sandbox can hide from bash: `/var/lib/pullfrog/opencode/auth.json` in
-//      CI (sudo-bootstrapped, fail-closed if sudo unavailable),
+//      sandbox can hide from bash: `/var/lib/pullfrog/run-*/opencode/auth.json`
+//      in CI (sudo-bootstrapped, fail-closed if sudo unavailable),
 //      `$HOME/.local/share/opencode/auth.json` locally (sandbox is no-op
 //      locally so the path is irrelevant to security)
 //   5. returns the path + the original refresh token so the post-run hook
@@ -49,16 +49,36 @@
 // See [wiki/codex-auth.md] for the full data-flow picture.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 import { log } from "./cli.ts";
 import { type CodexAuthBody, parseCodexAuthBody, stringifyCodexAuthBody } from "./codexOAuth.ts";
 import { decodeJwtExpMs } from "./oauthShared.ts";
+import { SUBSCRIPTION_DATA_DIR_STATE } from "./oauthWriteback.ts";
+import { saveSecretState } from "./secretCommands.ts";
 import { parseXaiAuthBody, type XaiAuthBody } from "./xaiOAuth.ts";
 
 const CODEX_AUTH_ENV = "CODEX_AUTH_JSON";
 const XAI_AUTH_ENV = "GROK_AUTH_JSON";
+const installedSubscriptionPaths = new Map<string, string>();
+let installedDataHome: string | undefined;
+
+/** the data dir a subscription was installed into this run, which opencode's XDG_DATA_HOME must name. */
+export function getSubscriptionDataHome(): string | undefined {
+  return installedDataHome;
+}
+
+export function clearInstalledSubscription(name: "CODEX_AUTH_JSON" | "GROK_AUTH_JSON") {
+  const path = installedSubscriptionPaths.get(name);
+  if (!path || !existsSync(path)) return;
+  const value: unknown = JSON.parse(readFileSync(path, "utf8"));
+  if (!value || typeof value !== "object") return;
+  if (name === "CODEX_AUTH_JSON" && "openai" in value) delete value.openai;
+  if (name === "GROK_AUTH_JSON" && "xai" in value) delete value.xai;
+  writeFileSync(path, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+  installedSubscriptionPaths.delete(name);
+}
 
 /** sandbox-hidden home for pullfrog-managed on-disk secrets in CI. bash via
  * MCP shell tmpfs-overlays this path; opencode's internal auth module
@@ -101,8 +121,6 @@ export interface InstalledCodexAuth {
   /** absolute path of the auth.json we wrote — caller passes this to the
    * post-hook via core.saveState for refresh-detection later. */
   authPath: string;
-  /** value to set as XDG_DATA_HOME for the OpenCode subprocess. */
-  xdgDataHome: string;
   /** refresh_token from the env at materialization time. post-hook
    * compares against the on-disk file after the run to detect whether
    * OpenCode refreshed during the session (only happens on long runs
@@ -117,12 +135,13 @@ export interface InstalledCodexAuth {
 }
 
 /** materialize CODEX_AUTH_JSON from env into a disk path OpenCode reads from.
- * returns null when the env var is absent, malformed, or wrong auth mode —
+ * returns null when the env var is absent, malformed, or wrong auth mode, or
+ * when this runner cannot host it (`resolveDataHome`) —
  * caller treats null as "no codex auth, fall through to API key flow".
  *
  * The env value is server-side guaranteed fresh by `maybeRotateCodexSecret`
- * in the run-context endpoint. We parse + write it here and set
- * `process.env.XDG_DATA_HOME` so every opencode subprocess discovers the
+ * in the run-context endpoint. We parse + write it here and record the dir
+ * (`getSubscriptionDataHome`) so every opencode subprocess discovers the
  * auth.json; no refresh, no DB interaction. */
 export function installCodexAuth(): InstalledCodexAuth | null {
   const raw = process.env[CODEX_AUTH_ENV];
@@ -142,6 +161,7 @@ export function installCodexAuth(): InstalledCodexAuth | null {
   const expiresMs = decodeJwtExpMs(body.tokens.access_token) ?? 0;
 
   const xdgDataHome = resolveDataHome();
+  if (!xdgDataHome) return null;
   const opencodeDir = join(xdgDataHome, "opencode");
   const authPath = join(opencodeDir, "auth.json");
 
@@ -158,17 +178,15 @@ export function installCodexAuth(): InstalledCodexAuth | null {
     },
   });
 
-  // point every opencode subprocess in this run (agent spawn + `opencode
-  // models` introspection) at this auth.json. only opencode reads
-  // XDG_DATA_HOME and this only fires on codex runs, so the blast radius is
-  // exactly the subprocesses that must discover the OAuth-routed openai/* models.
-  process.env.XDG_DATA_HOME = xdgDataHome;
+  // every opencode subprocess in this run (agent spawn + `opencode models`
+  // introspection) reads this through `openCodeHomeEnv`.
+  installedDataHome = xdgDataHome;
 
   log.info(`» installed Codex auth at ${authPath}`);
+  installedSubscriptionPaths.set(CODEX_AUTH_ENV, authPath);
 
   return {
     authPath,
-    xdgDataHome,
     originalRefresh: body.tokens.refresh_token,
     originalIdToken: body.tokens.id_token,
   };
@@ -203,8 +221,6 @@ function writeOpenCodeAuthEntry(params: {
 export interface InstalledXaiAuth {
   /** absolute path of the auth.json we wrote — the post-hook diffs it. */
   authPath: string;
-  /** value to set as XDG_DATA_HOME for the OpenCode subprocess. */
-  xdgDataHome: string;
   /** refresh_token at materialization time. opencode's XaiAuthPlugin rotates
    * in-process on a long run, so the post-hook compares against this to decide
    * whether anything needs writing back. */
@@ -219,7 +235,8 @@ export interface InstalledXaiAuth {
  * The plugin sends the token to `api.x.ai/v1` — it deliberately sets no
  * baseURL — so there is no CLI proxy and no client-version header in play.
  *
- * returns null when the env var is absent or malformed; caller treats null as
+ * returns null when the env var is absent or malformed, or when this runner
+ * cannot host it (`resolveDataHome`); caller treats null as
  * "no grok subscription auth, fall through to XAI_API_KEY". */
 export function installXaiAuth(): InstalledXaiAuth | null {
   const raw = process.env[XAI_AUTH_ENV];
@@ -233,6 +250,7 @@ export function installXaiAuth(): InstalledXaiAuth | null {
   if (isXaiRejectedChain(body)) return null;
 
   const xdgDataHome = resolveDataHome();
+  if (!xdgDataHome) return null;
   const opencodeDir = join(xdgDataHome, "opencode");
   const authPath = join(opencodeDir, "auth.json");
 
@@ -252,10 +270,11 @@ export function installXaiAuth(): InstalledXaiAuth | null {
     },
   });
 
-  process.env.XDG_DATA_HOME = xdgDataHome;
+  installedDataHome = xdgDataHome;
   log.info(`» installed Grok auth at ${authPath}`);
+  installedSubscriptionPaths.set(XAI_AUTH_ENV, authPath);
 
-  return { authPath, xdgDataHome, originalRefresh: body.tokens.refresh_token };
+  return { authPath, originalRefresh: body.tokens.refresh_token };
 }
 
 /** the server latches `refresh_rejected_at` when xAI rejects the refresh.
@@ -311,7 +330,9 @@ export function installCodexHome(): InstalledCodexHome | null {
     return null;
   }
 
-  const codexHome = join(resolveDataHome(), "codex");
+  const root = resolveDataHome();
+  if (!root) return null;
+  const codexHome = join(root, "codex");
   const authPath = join(codexHome, "auth.json");
 
   mkdirSync(codexHome, { recursive: true });
@@ -322,29 +343,40 @@ export function installCodexHome(): InstalledCodexHome | null {
   return { codexHome, authPath, originalRefresh: body.tokens.refresh_token };
 }
 
+let dataHome: string | null | undefined;
+
+/** subscriptions this run held but could not install, so a no-key error can name the real cause. */
+export const unhostedSubscriptions = new Set<string>();
+
+/** false for a Codex or Grok subscription on a runner that cannot host it (`resolveDataHome`). */
+export function canInstallSubscription(name: string) {
+  return (name !== CODEX_AUTH_ENV && name !== XAI_AUTH_ENV) || resolveDataHome() !== null;
+}
+
 /** pick the XDG_DATA_HOME for codex auth.
  *
  * - **local dev (CI != true)**: use $HOME. mount-namespace sandbox is no-op
  *   locally so the file isn't protected from bash either way; codex auth on
  *   a developer's machine is the developer's responsibility.
- * - **CI**: bootstrap /var/lib/pullfrog via sudo. MCP shell's mount namespace
- *   tmpfs-overlays this path, and claude managed-settings + opencode
- *   external_directory both deny it — three independent layers.
+ * - **CI**: bootstrap /var/lib/pullfrog via sudo and use a fresh dir inside it.
+ *   MCP shell's mount namespace tmpfs-overlays this path, and claude
+ *   managed-settings + opencode external_directory both deny it — three
+ *   independent layers.
  *
- * **fail closed in CI** when the sudo bootstrap fails. falling back to
- * $HOME silently strips two of the three protection layers — the wiki
- * claims three layers; degrading to one without a hard error contradicts
- * that claim and is exactly the kind of silent security regression the
- * reviewer should never have to catch. operators on locked-down runners
- * that can't passwordless-sudo should re-provision sudo or remove
- * `CODEX_AUTH_JSON` from the run entirely. */
-function resolveDataHome(): string {
+ * **fail closed in CI** when the sudo bootstrap fails — for the credential,
+ * not the run. falling back to $HOME silently strips two of the three
+ * protection layers, so the subscription is not installed at all (null) and
+ * leaves env: a run on any other model proceeds, and one that needs it
+ * reports no key.
+ * failing the whole run instead broke every run on a sudo-less self-hosted
+ * runner that merely HELD a subscription, whatever its model (#1335). */
+function resolveDataHome(): string | null {
   if (process.env.CI !== "true") return join(homedir(), ".local", "share");
-  bootstrapPullfrogDataDir();
-  return KATAK_DATA_DIR;
+  if (dataHome === undefined) dataHome = bootstrapPullfrogDataDir();
+  return dataHome;
 }
 
-function bootstrapPullfrogDataDir(): void {
+function bootstrapPullfrogDataDir(): string | null {
   const user = userInfo().username;
   // `id -gn $user` resolves the user's primary group name correctly even on
   // self-hosted images where the group isn't `<user>:<user>` (e.g., `runner`
@@ -366,12 +398,25 @@ function bootstrapPullfrogDataDir(): void {
     });
     execFileSync("sudo", ["-n", "chmod", "700", KATAK_DATA_DIR], { stdio: "pipe" });
   } catch (err) {
-    throw new Error(
-      `failed to bootstrap ${KATAK_DATA_DIR} (required for codex auth in CI): ${err instanceof Error ? err.message : String(err)}. ` +
-        `the MCP shell's mount-namespace sandbox cannot protect the auth file when it lives under $HOME, ` +
-        `and silently falling back would contradict the "three independent layers" claim in wiki/codex-auth.md. ` +
-        `passwordless sudo is required for codex auth on this runner — either configure it, or remove ` +
-        `CODEX_AUTH_JSON from the run.`
+    log.warning(
+      `» subscription auth skipped: could not create ${KATAK_DATA_DIR} (${err instanceof Error ? err.message : String(err)}). ` +
+        `it must live outside the agent sandbox's reach, which needs passwordless sudo on this runner; ` +
+        `runs on a model that needs the subscription will report no key.`
     );
+    // harness routing and key validation read the env vars, not the installed file.
+    for (const name of [CODEX_AUTH_ENV, XAI_AUTH_ENV]) {
+      if (process.env[name]) unhostedSubscriptions.add(name);
+      delete process.env[name];
+    }
+    return null;
   }
+  // one per run: concurrent runs on a self-hosted host shared opencode's SQLite db and
+  // the codex CLI's home here (#1475). the post hook removes it after the writeback; a
+  // GitHub-hosted VM is discarded anyway, so it skips that post-step npm bootstrap.
+  const runDir = mkdtempSync(join(KATAK_DATA_DIR, "run-"));
+  // not a credential: this is just the one state writer the secret-command guard allows.
+  if (process.env.RUNNER_ENVIRONMENT !== "github-hosted") {
+    saveSecretState(SUBSCRIPTION_DATA_DIR_STATE, runDir);
+  }
+  return runDir;
 }

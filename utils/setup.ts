@@ -1,5 +1,5 @@
 import { execFileSync, execSync } from "node:child_process";
-import { mkdtempSync, readdirSync, realpathSync, unlinkSync } from "node:fs";
+import { mkdtempSync, readdirSync, realpathSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ShellPermission } from "../external.ts";
@@ -14,13 +14,37 @@ export interface SetupOptions {
 }
 
 /**
- * Create a shared temp directory for the action
+ * Create a shared temp directory for the action, removed when the run's scope
+ * exits. a persistent self-hosted runner never wipes `/tmp`, so every run used
+ * to leave its tree (the OpenCode install alone is hundreds of MB) until the
+ * disk filled and every job on the runner died.
  */
-export function createTempDirectory(): string {
-  const sharedTempDir = mkdtempSync(join(tmpdir(), "pullfrog-"));
-  process.env.KATAK_TEMP_DIR = sharedTempDir;
-  log.info(`» created temp dir at ${sharedTempDir}`);
-  return sharedTempDir;
+export function createTempDirectory(): { path: string; [Symbol.dispose]: () => void } {
+  const path = mkdtempSync(join(tmpdir(), "pullfrog-"));
+  process.env.KATAK_TEMP_DIR = path;
+  log.info(`» created temp dir at ${path}`);
+  return { path, [Symbol.dispose]: () => removeTempDirectory(path) };
+}
+
+/**
+ * best-effort: the disposer runs after the run's work has landed, so a throw
+ * here would fail a green run. the agent's `HOME` is this directory, and Go
+ * leaves its module cache read-only, so restore write bits before one retry.
+ */
+function removeTempDirectory(path: string): void {
+  try {
+    try {
+      rmSync(path, { recursive: true, force: true });
+    } catch {
+      execFileSync("chmod", ["-R", "u+w", path]);
+      rmSync(path, { recursive: true, force: true });
+    }
+    log.debug(`» removed temp dir at ${path}`);
+  } catch (err) {
+    log.warning(
+      `» could not remove temp dir at ${path}: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
 }
 
 /**

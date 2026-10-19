@@ -161,6 +161,9 @@ export interface ToolState {
   // reader most wants from the `Pullfrog` check, so it is surfaced as a link in
   // that check's summary. absent when the run produced no review.
   approval?: { wouldApprove: boolean; sha: string | undefined; url?: string | undefined };
+  // the checkoutSha that report_progress's `no_review_needed` declared needs no review —
+  // IncrementalReview's non-substantive exit, which carries the prior verdict forward.
+  noReviewNeededSha?: string | undefined;
   // dedupe key: parent review comment_id → most-recent reply written this
   // session by reply_to_review_comment. used by duplicateReplyDecision to
   // skip identical-body re-emissions of the same call (PR #610 root cause).
@@ -239,13 +242,6 @@ export interface ToolState {
   // precedence, and codex picks auth.json or an API key on mutually exclusive
   // branches. left unset rather than guessed where a harness cannot tell.
   credential?: AgentCredential | undefined;
-  // set by main.ts when the configured model's credentials were all REJECTED by
-  // their own providers and the run moved to one this account can still serve.
-  // carried into PR-comment footers so users see "Using <model> (credentials
-  // for <configured> were rejected by the provider)" rather than being silently
-  // downgraded. literal record of an event that happened — matches the
-  // ToolState design rule.
-  modelFallback?: { from: string } | undefined;
   // true when the run fell back to the default proxy model purely because the
   // repo has no model selected (Router billing + "auto"). carried into footers
   // so the user can see they're on the cost-optimized default — a weaker
@@ -274,10 +270,11 @@ export interface ToolState {
   // via `result.error`. see `utils/agentHangReport.ts`.
   agentDiagnostic?: AgentDiagnostic | undefined;
   /**
-   * a `PATCH /api/workflow-run/:id` came back 404 — the reservation was never
-   * claimed, which is permanent for the life of the run (the claim happens at
-   * setup, strictly before any PATCH). latched so the remaining calls stop
-   * firing: one CI run spent 28 doomed round trips on it. see #1153.
+   * a `PATCH /api/workflow-run/:id` came back 404 — Pullfrog neither claimed a
+   * reservation for the run nor recorded it as a custom run, which is permanent for
+   * the life of the run (both happen at setup, strictly before any PATCH). latched so
+   * the remaining calls stop firing: one CI run spent 28 doomed round trips on it.
+   * see #1153.
    */
   workflowRunUnclaimed?: boolean | undefined;
 }

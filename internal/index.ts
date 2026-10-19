@@ -55,6 +55,7 @@ export {
   ladderRungs,
   modelAliases,
   modelHasStoredAuth,
+  modelIdLabel,
   OSS_MODEL_ALLOWLIST,
   OSS_RECOMMENDED_MODEL,
   offeredRungs,
@@ -73,8 +74,10 @@ export {
   resolveModelRung,
   resolveModelSlug,
   resolveOpenRouterModel,
+  resolvePickModel,
   resolveRoutedModel,
   resolveRung,
+  routerProxyOptOut,
   rungLabel,
   rungPosition,
   SUBSIDY_RUNG,
@@ -108,6 +111,7 @@ export {
   LEAPING_INTO_ACTION_PREFIX,
 } from "../utils/leapingComment.ts";
 export { MAX_LEARNINGS_LENGTH, truncateAtLineBoundary } from "../utils/learningsTruncate.ts";
+export { countOutstandingPullfrogThreads } from "../utils/outstandingThreads.ts";
 export type {
   CreateProgressCommentTarget,
   ProgressComment,
@@ -120,6 +124,7 @@ export {
   updateProgressComment,
 } from "../utils/progressComment.ts";
 export { PROVIDER_DASHBOARDS, type ProviderDashboard } from "../utils/providerDashboards.ts";
+export { detectProviderError } from "../utils/providerErrors.ts";
 export type {
   RunStatusCheckConclusion,
   RunStatusCheckOctokit,
@@ -131,6 +136,12 @@ export {
   RUN_STATUS_CHECK_NAME,
   runStatusCheckNeedsFinalizing,
 } from "../utils/runStatusCheck.ts";
+export * from "../utils/subscriptionCredentials.ts";
+export {
+  probeSubscription,
+  SubscriptionCredentialError,
+  subscriptionIdentity,
+} from "../utils/subscriptionProbe.ts";
 export {
   isValidTimeString,
   parseTimeString,

@@ -1,5 +1,5 @@
-import * as core from "@actions/core";
 import { log } from "./cli.ts";
+import { maskSecret } from "./secretCommands.ts";
 import { isSensitiveEnvName } from "./secrets.ts";
 
 /**
@@ -9,7 +9,7 @@ import { isSensitiveEnvName } from "./secrets.ts";
  * that re-emits parts of it leaks the unmasked tail. Trimming canonicalises
  * the value so the mask matches exactly what downstream tools will print.
  *
- * Masking is delegated to `core.setSecret` (not raw `console.log`) so the
+ * Masking is delegated to `maskSecret` (not raw `console.log`) so the
  * toolkit percent-encodes `\r`/`\n`; the runner V2 parser decodes them and
  * registers the full value plus every non-empty line as separate masks. That
  * keeps us safe for embedded-newline values (PEMs, kubeconfigs, JSON blobs)
@@ -55,7 +55,7 @@ export function sanitizeSecret(key: string, value: string): string | null {
       `» stripped whitespace from ${key} (whitespace in secret values breaks GitHub Actions log masking)`
     );
   }
-  core.setSecret(trimmed);
+  maskSecret(trimmed);
   return trimmed;
 }
 
